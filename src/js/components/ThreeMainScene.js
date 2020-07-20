@@ -24,8 +24,6 @@ const SETTINGS = {
 
 class ThreeMainScene {
     constructor(models, materials) {
-        console.log('working');
-
         // this._models = models;
         // this._materials = materials;
 
@@ -65,6 +63,7 @@ class ThreeMainScene {
 
     _setupListeners() {
         window.addEventListener('resize', () => this._resizeHandler());
+        this._container.addEventListener('click', () => this._clickHandler());
     }
 
     _setupValues() {
@@ -112,7 +111,7 @@ class ThreeMainScene {
         this._canvasSize = this._canvas.getBoundingClientRect();
 
         this._scene = new THREE.Scene();
-        this._scene.rotation.y = -5;
+        this._scene.rotation.y = Math.PI *2 + 0.5;
         
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
@@ -138,6 +137,7 @@ class ThreeMainScene {
         this._setupGround();
         this._setupTargetBox();
         this._setupBall();
+        this._setupBallStick();
     }
 
     _setupGround() {
@@ -149,34 +149,46 @@ class ThreeMainScene {
     }
 
     _setupTargetBox() {
-        var geometry = new THREE.BoxBufferGeometry( 10, 100, 10 );
-        var material = new THREE.MeshBasicMaterial( {color: 0x808080} );
+        let geometry = new THREE.BoxBufferGeometry( 10, 100, 10 );
+        let material = new THREE.MeshBasicMaterial( {color: 0x808080} );
         this._targetBox = new THREE.Mesh( geometry, material );
         this._targetBox.position.set(0, 50, 0)
         this._scene.add( this._targetBox );
     }
 
     _setupBall() {
-        var geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
-        var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+        let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
+        let material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
         this._ball = new THREE.Mesh( geometry, material );
         this._ball.position.set(-10, 5, 0)
         this._scene.add( this._ball );
+        this._setupBallPhysics();
+    }
 
+    _setupBallStick() {
+        let geometry = new THREE.CylinderGeometry( 0.1, 0.1, 5, 32 );
+        let material = new THREE.MeshBasicMaterial( {color: 0x33CC00} );
+        this._ballStick = new THREE.Mesh( geometry, material );
+        this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
+        this._ballStick.rotation.x = Math.PI / 2;
+        this._ballStick.rotation.z = Math.PI / 2;
+
+        this._scene.add( this._ballStick );
+    }
+
+    _setupBallPhysics() {
         this._ballBody = this._oimoWorld.add({ 
             type:'sphere', 
             size:[1,1,1],
             pos:[-10, 5, 0],
             rot:[0, 0, 0],
-            move:true,
+            move: false,
             density: 1,
             friction: 0.2,
             restitution: 0.2,
             belongsTo: 1,
             collidesWith: 0xffffffff
         });
-
-       
     }
 
     _animate() {
