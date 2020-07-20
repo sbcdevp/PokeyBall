@@ -3,12 +3,13 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
 import * as dat from 'dat.gui';
+import * as OIMO from 'oimo';
 
 const SETTINGS = {
     cameraPosition : {
         x: 0,
         y: 10,
-        z: 80
+        z: 30
     },
     directionnalLight: {
         intensity: 1.2
@@ -50,10 +51,14 @@ class ThreeMainScene {
     _setup() {
         this._setupValues();
 
+        
         this._setupRenderer();
-        this._setupScene();
-        this._animate();
+        
+        this._setupPhysics();
 
+        this._setupScene();
+
+        this._animate();
         this._setupListeners();
         this._resize();
     }
@@ -76,25 +81,43 @@ class ThreeMainScene {
         this._renderer.setPixelRatio(3);
     }
 
+    _setupPhysics() {
+        this._oimoWorld = new OIMO.World({ 
+            timestep: 1/60, 
+            iterations: 8, 
+            broadphase: 2, // 1 brute force, 2 sweep and prune, 3 volume tree
+            worldscale: 1, // scale full world 
+            random: false,  // randomize sample
+            info: false,   // calculate statistic or not
+            gravity: [0,-9.8,0] 
+        });
+    }
+    
+    _setupBallPhysics() {
+        this.ballBody = this._oimoWorld.add({ 
+            type:'sphere', 
+            size:[1,1,1],
+            pos:[0,0,0],
+            rot:[0,0,0],
+            move:true,
+            density: 1,
+            friction: 0.2,
+            restitution: 0.2,
+            belongsTo: 1,
+            collidesWith: 0xffffffff
+        });
+    }
+
     _setupScene() {
         this._canvasSize = this._canvas.getBoundingClientRect();
 
         this._scene = new THREE.Scene();
-        this._scene.rotation.y = -10;
+        this._scene.rotation.y = -5;
         
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
         
         this._controls = new OrbitControls(this._camera, this._canvas);
-        // this._controls.enableDamping = true;
-        // this._controls.enablePan = false;
-        // this._controls.minPolarAngle = 0.8;
-        // this._controls.maxDistance = 30;        
-        // this._controls.minDistance = 5;        
-
-		// this._controls.maxPolarAngle = 2.4;
-		// this._controls.dampingFactor = 0.07;
-		// this._controls.rotateSpeed = 0.5;
 
         this._setupSceneObjects();
     }
@@ -114,10 +137,11 @@ class ThreeMainScene {
     _setupSceneObjects() {
         this._setupGround();
         this._setupTargetBox();
+        this._setupBall();
     }
 
     _setupGround() {
-        let geometry = new THREE.PlaneBufferGeometry( 50, 50, 32 );
+        let geometry = new THREE.PlaneBufferGeometry( 500, 500, 32 );
         let material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
         this._ground = new THREE.Mesh( geometry, material );
         this._ground.rotation.x = Math.PI / 2
@@ -126,10 +150,33 @@ class ThreeMainScene {
 
     _setupTargetBox() {
         var geometry = new THREE.BoxBufferGeometry( 10, 100, 10 );
-        var material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
+        var material = new THREE.MeshBasicMaterial( {color: 0x808080} );
         this._targetBox = new THREE.Mesh( geometry, material );
         this._targetBox.position.set(0, 50, 0)
         this._scene.add( this._targetBox );
+    }
+
+    _setupBall() {
+        var geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
+        var material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+        this._ball = new THREE.Mesh( geometry, material );
+        this._ball.position.set(-10, 5, 0)
+        this._scene.add( this._ball );
+
+        this._ballBody = this._oimoWorld.add({ 
+            type:'sphere', 
+            size:[1,1,1],
+            pos:[-10, 5, 0],
+            rot:[0, 0, 0],
+            move:true,
+            density: 1,
+            friction: 0.2,
+            restitution: 0.2,
+            belongsTo: 1,
+            collidesWith: 0xffffffff
+        });
+
+       
     }
 
     _animate() {
@@ -138,6 +185,10 @@ class ThreeMainScene {
     }
 
     _render() {
+        this._oimoWorld.step();
+
+        this._ball.position.copy( this._ballBody.getPosition() );
+        this._ball.quaternion.copy( this._ballBody.getQuaternion() );
 
         this._renderer.render(this._scene, this._camera)
     }
