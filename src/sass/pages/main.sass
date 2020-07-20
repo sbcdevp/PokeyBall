@@ -1,0 +1,51 @@
+.container 
+    width: 100%
+    height: 100vh
+    display: flex
+    canvas
+        width: 100%
+        height: 100vh
+        position: absolute
+    &__left
+        position: relative
+        width: 65%
+        .container__content
+            margin-left: 15%
+            .content__info
+                position: absolute
+                bottom: 35px
+                .info--name
+                    font-family: $adieuBlack
+                    font-size: rem(15px)
+                    text-transform: uppercase
+                .info--about
+                    font-family: $moderat
+                    font-size: rem(14px)
+                    display: flex
+                    align-items: center
+                    .separator
+                        display: inline-block
+                        margin-left: rem(4.5px)
+                        margin-right: rem(4.5px)
+                        margin-top: rem(5px)
+                        width: rem(23px)
+                        background-color: black
+                        height: 1px
+
+    &__right
+        position: relative
+        border: 3px solid black
+        width: 35%
+        background-color: $yellow
+        .container__content
+            margin-left: 15%
+            margin-top: 100px
+            .content__info
+                .info--projects
+                    font-size: rem(50px)
+                    font-family: $adieuBold
+                .info--contact
+                    position: absolute
+                    bottom: 35px
+                    font-family: $moderat
+                    font-size: rem(14px)
