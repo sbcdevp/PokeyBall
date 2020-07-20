@@ -2,8 +2,12 @@ import * as THREE from 'three';
 
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
+import lerp from "../utils/lerp"
+
 import * as dat from 'dat.gui';
 import * as OIMO from 'oimo';
+import Hammer from 'hammerjs';
+
 
 const SETTINGS = {
     cameraPosition : {
@@ -19,6 +23,11 @@ const SETTINGS = {
     },
     material: {
         metalness: 0
+    },
+    ballPosition: {
+        x: -10,
+        y: 50,
+        z: 0
     }
 }
 
@@ -64,10 +73,16 @@ class ThreeMainScene {
     _setupListeners() {
         window.addEventListener('resize', () => this._resizeHandler());
         this._container.addEventListener('click', () => this._clickHandler());
+        document.addEventListener('keyup', () => this._testHandler());
+
     }
 
     _setupValues() {
         // this._time = 0;
+    }
+
+    _setupHammer() {
+
     }
 
     _setupRenderer() {
@@ -92,21 +107,6 @@ class ThreeMainScene {
         });
     }
     
-    _setupBallPhysics() {
-        this.ballBody = this._oimoWorld.add({ 
-            type:'sphere', 
-            size:[1,1,1],
-            pos:[0,0,0],
-            rot:[0,0,0],
-            move:true,
-            density: 1,
-            friction: 0.2,
-            restitution: 0.2,
-            belongsTo: 1,
-            collidesWith: 0xffffffff
-        });
-    }
-
     _setupScene() {
         this._canvasSize = this._canvas.getBoundingClientRect();
 
@@ -121,17 +121,6 @@ class ThreeMainScene {
         this._setupSceneObjects();
     }
 
-    _resize() {
-        this._width = window.innerWidth;
-        this._height = window.innerHeight;
-        this._devicePixelRatio = window.devicePixelRatio;
-
-        this._renderer.setSize(this._width, this._height);
-        this._renderer.setPixelRatio(this._devicePixelRatio);
-
-        this._camera.aspect = this._width/this._height;
-        this._camera.updateProjectionMatrix();
-    }
 
     _setupSceneObjects() {
         this._setupGround();
@@ -160,9 +149,9 @@ class ThreeMainScene {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
         let material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
         this._ball = new THREE.Mesh( geometry, material );
-        this._ball.position.set(-10, 5, 0)
+        this._ball.position.set(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
         this._scene.add( this._ball );
-        this._setupBallPhysics();
+        this._setupBallPhysics(false);
     }
 
     _setupBallStick() {
@@ -176,19 +165,30 @@ class ThreeMainScene {
         this._scene.add( this._ballStick );
     }
 
-    _setupBallPhysics() {
+    _setupBallPhysics(isMoving) {
         this._ballBody = this._oimoWorld.add({ 
             type:'sphere', 
             size:[1,1,1],
-            pos:[-10, 5, 0],
+            pos:[this._ball.position.x, this._ball.position.y, this._ball.position.z],
             rot:[0, 0, 0],
-            move: false,
+            move: isMoving,
             density: 1,
             friction: 0.2,
             restitution: 0.2,
-            belongsTo: 1,
-            collidesWith: 0xffffffff
+            belongsTo: 0,
+            collidesWith: 0
         });
+    }
+
+    _stopBallOnClick() {
+        // this.clicked = true;
+        this._ballBody.setPosition(this._ball.position)
+        this._setupBallPhysics(false)
+    }
+
+    _restartBallOnClick() {
+        this._setupBallPhysics(true)
+        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 200, z: 0})
     }
 
     _animate() {
@@ -199,16 +199,43 @@ class ThreeMainScene {
     _render() {
         this._oimoWorld.step();
 
+        if(this._ballBody.pos.y < 0) {
+            this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
+        }
+
+        // if(this.clicked) {
+        //     this.clicked = false;
+        //     // this._ballStick.geometry.scale(lerp(this._ballStick.scale.x, 0, 0.1), lerp(this._ballStick.scale.x, 0, 0.1), 1)
+        // }
         this._ball.position.copy( this._ballBody.getPosition() );
         this._ball.quaternion.copy( this._ballBody.getQuaternion() );
 
         this._renderer.render(this._scene, this._camera)
     }
 
+    _resize() {
+        this._width = window.innerWidth;
+        this._height = window.innerHeight;
+        this._devicePixelRatio = window.devicePixelRatio;
+
+        this._renderer.setSize(this._width, this._height);
+        this._renderer.setPixelRatio(this._devicePixelRatio);
+
+        this._camera.aspect = this._width/this._height;
+        this._camera.updateProjectionMatrix();
+    }
+
     _resizeHandler() {
         this._resize();
     }
     
+    _clickHandler() {
+        this._stopBallOnClick();
+    }
+    _testHandler() {
+        this._restartBallOnClick();
+    }
+
     _settingsChangedHandler() {
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z )
     }
