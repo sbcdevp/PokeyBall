@@ -2,12 +2,17 @@ import * as THREE from 'three';
 
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
+import { gsap, TimelineLite, Power3, TweenLite } from "gsap";
+
 import lerp from "../utils/lerp"
+import "../utils/tween"
+
 
 import * as dat from 'dat.gui';
 import * as OIMO from 'oimo';
 import Hammer from 'hammerjs';
 
+gsap.registerPlugin();
 
 const SETTINGS = {
     cameraPosition : {
@@ -26,7 +31,7 @@ const SETTINGS = {
     },
     ballPosition: {
         x: -10,
-        y: 50,
+        y: 5,
         z: 0
     }
 }
@@ -58,7 +63,9 @@ class ThreeMainScene {
     _setup() {
         this._setupValues();
 
-        
+        this._setupHammer();
+        this._setupListeners();
+
         this._setupRenderer();
         
         this._setupPhysics();
@@ -66,23 +73,31 @@ class ThreeMainScene {
         this._setupScene();
 
         this._animate();
-        this._setupListeners();
         this._resize();
-    }
-
-    _setupListeners() {
-        window.addEventListener('resize', () => this._resizeHandler());
-        this._container.addEventListener('click', () => this._clickHandler());
-        document.addEventListener('keyup', () => this._testHandler());
-
     }
 
     _setupValues() {
         // this._time = 0;
+        this._launchingBallForce = 0;
+        this._isBallStopped = true;
+
     }
 
     _setupHammer() {
+        this.options = {
+            direction: Hammer.DIRECTION_VERTICAL
+        }
+        this.hammer = new Hammer(this._container, this.options);
+        this.hammer.get('pan').set( this.options );
+    }
 
+    _setupListeners() {
+        window.addEventListener('resize', () => this._resizeHandler());
+
+        this.hammer.on("panstart", (event) => this._panStartHandler(event));
+        this.hammer.on("panmove", (event) => this._panMoveHandler(event));
+        this.hammer.on("panend", (event) => this._panEndHandler(event));
+        this.hammer.on("tap", (event) => this._tapHandler(event));
     }
 
     _setupRenderer() {
@@ -111,12 +126,12 @@ class ThreeMainScene {
         this._canvasSize = this._canvas.getBoundingClientRect();
 
         this._scene = new THREE.Scene();
-        this._scene.rotation.y = Math.PI *2 + 0.5;
+        this._scene.rotation.y = Math.PI *2 - 0.3;
         
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
         
-        this._controls = new OrbitControls(this._camera, this._canvas);
+        // this._controls = new OrbitControls(this._camera, this._canvas);
 
         this._setupSceneObjects();
     }
@@ -180,15 +195,25 @@ class ThreeMainScene {
         });
     }
 
-    _stopBallOnClick() {
+    _stopBall() {
         // this.clicked = true;
+        TweenLite.to(this._ballStick.scale, 0.3, {x: 1, y: 1, z: 1, ease: Power3.easeInOut})
+
+        this._isBallStopped = true;
         this._ballBody.setPosition(this._ball.position)
+        this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
+
         this._setupBallPhysics(false)
     }
 
-    _restartBallOnClick() {
+    _launchBall() {
+        this._isBallStopped = false;
         this._setupBallPhysics(true)
-        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 200, z: 0})
+
+        TweenLite.to(this._ballStick.scale, 0.3, {x: 0, y: 0, z: 0, ease: Power3.easeInOut})
+        
+        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 5 * this._launchingBallForce, z: 0})
+        this._launchingBallForce = 0;
     }
 
     _animate() {
@@ -199,16 +224,20 @@ class ThreeMainScene {
     _render() {
         this._oimoWorld.step();
 
-        if(this._ballBody.pos.y < 0) {
+        this._cameraFollowUpdate();
+
+        if(this._ballBody.pos.y < -10) {
+            this._setupBallPhysics(false)
             this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
         }
 
-        // if(this.clicked) {
-        //     this.clicked = false;
-        //     // this._ballStick.geometry.scale(lerp(this._ballStick.scale.x, 0, 0.1), lerp(this._ballStick.scale.x, 0, 0.1), 1)
+        // if(this._isBallStopped) {
+        //     this._ballStick.geometry.scale(lerp(0, 1, 1), lerp(0, 1, 1), 1)
+        // } else {
+        //     this._ballStick.geometry.scale(lerp(1, 0, 0.1), lerp(1, 0, 0.1), 1)  
         // }
+
         this._ball.position.copy( this._ballBody.getPosition() );
-        this._ball.quaternion.copy( this._ballBody.getQuaternion() );
 
         this._renderer.render(this._scene, this._camera)
     }
@@ -225,15 +254,33 @@ class ThreeMainScene {
         this._camera.updateProjectionMatrix();
     }
 
+    _cameraFollowUpdate(){
+         let offset = new THREE.Vector3(this._ball.position.x - 20, this._ball.position.y, this._ball.position.z);
+         this._camera.position.lerp(offset, 0.1);
+         this._camera.lookAt(this._ball.position.x, this._ball.position.y, this._ball.position.z); 
+    }
+
     _resizeHandler() {
         this._resize();
     }
     
-    _clickHandler() {
-        this._stopBallOnClick();
+    _tapHandler() {
+        this._stopBall();
     }
-    _testHandler() {
-        this._restartBallOnClick();
+
+    _panStartHandler(panEvent) {
+        console.log(panEvent)
+    }
+
+    _panMoveHandler(panEvent) {
+        if(this._launchingBallForce < 20) {
+            this._launchingBallForce += -panEvent.deltaY * -0.1;
+            this._ballBody.pos.y = this._ballBody.pos.y - this._launchingBallForce * 0.05
+        }
+    }
+
+    _panEndHandler() {
+        this._launchBall();
     }
 
     _settingsChangedHandler() {
