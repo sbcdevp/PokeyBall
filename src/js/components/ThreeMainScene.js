@@ -197,7 +197,7 @@ class ThreeMainScene {
 
     _stopBall() {
         // this.clicked = true;
-        TweenLite.to(this._ballStick.scale, 0.3, {x: 1, y: 1, z: 1, ease: Power3.easeInOut})
+        TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
 
         this._isBallStopped = true;
         this._ballBody.setPosition(this._ball.position)
@@ -210,7 +210,7 @@ class ThreeMainScene {
         this._isBallStopped = false;
         this._setupBallPhysics(true)
 
-        TweenLite.to(this._ballStick.scale, 0.3, {x: 0, y: 0, z: 0, ease: Power3.easeInOut})
+        TweenLite.to(this._ballStick.scale, 0, {x: 0, y: 0, z: 0, ease: Power3.easeInOut, delay: 1})
         
         this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 5 * this._launchingBallForce, z: 0})
         this._launchingBallForce = 0;
@@ -273,10 +273,17 @@ class ThreeMainScene {
     }
 
     _panMoveHandler(panEvent) {
-        if(this._launchingBallForce < 20) {
-            this._launchingBallForce += -panEvent.deltaY * -0.1;
-            this._ballBody.pos.y = this._ballBody.pos.y - this._launchingBallForce * 0.05
+        this._launchingBallForce = 0
+
+        if(panEvent.direction === 16 && panEvent.deltaY > 10) {
+        this._launchingBallForce -= 0.2
+
+        } else if ( panEvent.direction === 8 && panEvent.deltaY > 0) {
+            this._launchingBallForce += 0.2
         }
+        
+        this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._launchingBallForce, 0.1);
+        this._launchingBallForce = panEvent.deltaY * 0.05;
     }
 
     _panEndHandler() {
