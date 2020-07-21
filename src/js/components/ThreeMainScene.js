@@ -135,22 +135,22 @@ class ThreeMainScene {
         this._scene.rotation.y = Math.PI *2 - 0.25;
         
         let fogColor = new THREE.Color(0x080808);
-        this._scene.background = new THREE.Color( 0xefd1b5 );
-        // this._scene.fog = new THREE.FogExp2( 0xefd1b5, 0.025 );
+        this._scene.background = new THREE.Color( 0xF2CB73 );
+        this._scene.fog = new THREE.FogExp2( 0xF2CB73, 0.005 );
 
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
         
-        this._controls = new OrbitControls(this._camera, this._canvas);
+        // this._controls = new OrbitControls(this._camera, this._canvas);
 
         this._setupSceneObjects();
     }
 
 
     _setupSceneObjects() {
-        this._skyProperties();
-        this._skyColor();
-
+        // this._skyProperties();
+        
+        this._setupObstacles();
         this._setupGround();
         this._setupTargetBox();
         this._setupBall();
@@ -161,7 +161,7 @@ class ThreeMainScene {
     }
 
     _setupGround() {
-        let geometry = new THREE.PlaneBufferGeometry( 500, 500, 32 );
+        let geometry = new THREE.PlaneBufferGeometry( 5000, 5000, 32 );
         let material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} );
         this._ground = new THREE.Mesh( geometry, material );
         this._ground.rotation.x = Math.PI / 2
@@ -184,7 +184,6 @@ class ThreeMainScene {
         this.sunSphere.position.y = 40000 * Math.sin(-SETTINGS.sunController.azimuth) * Math.sin(-SETTINGS.sunController.inclination);
         this.sunSphere.position.z = 40000 * Math.sin(-SETTINGS.sunController.azimuth) * Math.cos(-SETTINGS.sunController.inclination);
         this.sunSphere.visible = SETTINGS.sunController.sun;
-        console.log(this.skyUniforms)
         this.skyUniforms["sunPosition"].value.copy(this.sunSphere.position);
         this.skyUniforms["turbidity"].value = SETTINGS.sunController.turbidity
         this.skyUniforms["rayleigh"].value = SETTINGS.sunController.rayleigh
@@ -203,6 +202,19 @@ class ThreeMainScene {
         this._scene.add( this._targetBox );
     }
 
+    _setupObstacles() {
+        let geometry = new THREE.BoxBufferGeometry( 12, 10, 12 );
+        let firstMaterial = new THREE.MeshBasicMaterial( {color: 0x272727, vertexColors: THREE.FaceColors} );
+        let secondMaterial = new THREE.MeshBasicMaterial( {color: 0x272727, vertexColors: THREE.FaceColors} );
+
+        this._firstObstacle = new THREE.Mesh( geometry, firstMaterial );
+        this._secondObstacle = new THREE.Mesh( geometry, secondMaterial );
+
+        this._firstObstacle.position.set(0, Math.random() * 100, 0)
+        this._secondObstacle.position.set(0, Math.random() * 100, 0)
+        this._scene.add( this._firstObstacle, this._secondObstacle );
+    }
+
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
         let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
@@ -216,7 +228,7 @@ class ThreeMainScene {
 
     _setupBallStick() {
         let geometry = new THREE.CylinderGeometry( 0.1, 0.1, 5, 32 );
-        let material = new THREE.MeshBasicMaterial( {color: 0x33CC00} );
+        let material = new THREE.MeshBasicMaterial( {color: 0xFFE403} );
         this._ballStick = new THREE.Mesh( geometry, material );
         this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
         this._ballStick.rotation.x = Math.PI / 2;
@@ -263,7 +275,6 @@ class ThreeMainScene {
                 }
                 let treeCloned = this._models[`tree_0${index}`].clone();
                 
-                
                 treeCloned.position.set(pos.x, pos.y, pos.z)
                 treeCloned.scale.set(0.06, 0.06, 0.06)
                 treeCloned.receiveShadow = true
@@ -294,13 +305,17 @@ class ThreeMainScene {
 
     _stopBall() {
         this._ballLaunched = false;
-        TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
-
-        this._ballBody.setPosition(this._ball.position)
-        this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
-
-        this._setupBallPhysics(false)
-        this._setupStickHole()
+        if(this._cantClick) {
+            this._ballBody.applyImpulse({x: 0, y: -100, z: 0}, {x: 0, y: -100, z: 0})
+        } else {
+            TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
+            
+            this._ballBody.setPosition(this._ball.position)
+            this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
+            
+            this._setupBallPhysics(false)
+            this._setupStickHole()
+        }
     }
 
     _animate() {
@@ -311,10 +326,16 @@ class ThreeMainScene {
     _render() {
         this._oimoWorld.step();
 
-        // this._cameraFollowUpdate();
+        this._cameraFollowUpdate();
 
         if(this._ballLaunched) {
-            this._ball.rotation.y += 0.3 
+            this._ball.rotation.y += 0.3
+            // if(this._ball.position)
+            if(this._ballBody.pos.y < this._firstObstacle.position.y - 5 || this._ballBody.pos.y < this._firstObstacle.position.y + 5) {
+                this._cantClick = true;
+            } else {
+                this._cantClick = false;
+            }
         }
 
         if(this._ballBody.pos.y < -10) {
