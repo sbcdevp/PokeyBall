@@ -38,8 +38,7 @@ const SETTINGS = {
 
 class ThreeMainScene {
     constructor(models, materials) {
-        // this._models = models;
-        // this._materials = materials;
+        this._models = models;
 
         this._canvas = document.querySelector('.js-canvas');
 
@@ -126,7 +125,7 @@ class ThreeMainScene {
         this._canvasSize = this._canvas.getBoundingClientRect();
 
         this._scene = new THREE.Scene();
-        this._scene.rotation.y = Math.PI *2 - 0.3;
+        this._scene.rotation.y = Math.PI *2 - 0.25;
         
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
@@ -142,6 +141,9 @@ class ThreeMainScene {
         this._setupTargetBox();
         this._setupBall();
         this._setupBallStick();
+        this._setupStickHole();
+        this._setupTrees();
+        this._setupLights();
     }
 
     _setupGround() {
@@ -153,9 +155,13 @@ class ThreeMainScene {
     }
 
     _setupTargetBox() {
-        let geometry = new THREE.BoxBufferGeometry( 10, 100, 10 );
-        let material = new THREE.MeshBasicMaterial( {color: 0x808080} );
+        let geometry = new THREE.BoxGeometry( 10, 100, 10 );
+        let material = new THREE.MeshBasicMaterial( {color: 0x808080, vertexColors: THREE.FaceColors} );
         this._targetBox = new THREE.Mesh( geometry, material );
+
+        this._targetBox.geometry.faces[ 8 ].color.setHex( 0x808000 );
+        this._targetBox.geometry.faces[ 9 ].color.setHex( 0x808000 ); 
+
         this._targetBox.position.set(0, 50, 0)
         this._scene.add( this._targetBox );
     }
@@ -195,8 +201,44 @@ class ThreeMainScene {
         });
     }
 
+    _setupStickHole() {
+        let geometry = new THREE.CircleBufferGeometry( 0.3, 10 );
+        let material = new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide } );
+        let circle = new THREE.Mesh( geometry, material );
+        circle.rotation.y = Math.PI / 2
+        circle.position.set(this._ballStick.position.x + 2.45, this._ballStick.position.y, this._ballStick.position.z)
+        this._scene.add( circle );
+    }
+
+    _setupTrees() {
+        for (let index = 0; index < 3; index++) {
+            this._models[`tree_0${index}`].position.set(Math.random() * 5, 0, Math.random() * 20)
+            this._models[`tree_0${index}`].scale.set(0.06, 0.06, 0.06)
+            this._models[`tree_0${index}`].receiveShadow = true
+            this._models[`tree_0${index}`].castShadow = true
+
+            this._scene.add(this._models[`tree_0${index}`])
+        }
+    }
+
+    _setupLights() {
+        let directionnalLight = new THREE.DirectionalLight( 0x404040, 2 );
+        let ambientLight = new THREE.AmbientLight( 0x404040, 2 );
+
+        this._scene.add( directionnalLight, ambientLight );
+    }
+
+    _launchBall() {
+        this._isBallStopped = false;
+        this._setupBallPhysics(true)
+
+        TweenLite.to(this._ballStick.scale, 0.1, {x: 0, y: 0, z: 0, ease: Power3.easeInOut})
+        
+        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 5 * this._launchingBallForce, z: 0})
+        this._launchingBallForce = 0;
+    }
+
     _stopBall() {
-        // this.clicked = true;
         TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
 
         this._isBallStopped = true;
@@ -204,16 +246,7 @@ class ThreeMainScene {
         this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
 
         this._setupBallPhysics(false)
-    }
-
-    _launchBall() {
-        this._isBallStopped = false;
-        this._setupBallPhysics(true)
-
-        TweenLite.to(this._ballStick.scale, 0, {x: 0, y: 0, z: 0, ease: Power3.easeInOut, delay: 1})
-        
-        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 5 * this._launchingBallForce, z: 0})
-        this._launchingBallForce = 0;
+        this._setupStickHole()
     }
 
     _animate() {
@@ -230,12 +263,6 @@ class ThreeMainScene {
             this._setupBallPhysics(false)
             this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
         }
-
-        // if(this._isBallStopped) {
-        //     this._ballStick.geometry.scale(lerp(0, 1, 1), lerp(0, 1, 1), 1)
-        // } else {
-        //     this._ballStick.geometry.scale(lerp(1, 0, 0.1), lerp(1, 0, 0.1), 1)  
-        // }
 
         this._ball.position.copy( this._ballBody.getPosition() );
 
@@ -276,12 +303,12 @@ class ThreeMainScene {
         this._launchingBallForce = 0
 
         if(panEvent.direction === 16 && panEvent.deltaY > 10) {
-        this._launchingBallForce -= 0.2
+        this._launchingBallForce -= 0.5
 
         } else if ( panEvent.direction === 8 && panEvent.deltaY > 0) {
-            this._launchingBallForce += 0.2
+            this._launchingBallForce += 0.5
         }
-        
+
         this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._launchingBallForce, 0.1);
         this._launchingBallForce = panEvent.deltaY * 0.05;
     }

@@ -1,0 +1,30 @@
+[
+    {
+        "name": "whole",
+        "url": "assets/images/whole.jpg"
+    },
+    {
+        "name": "dfts",
+        "url": "assets/images/dfts.jpg"
+    },
+    {
+        "name": "louvre",
+        "url": "assets/images/louvre.jpg"
+    },
+    {
+        "name": "mirror",
+        "url": "assets/images/mirror-min.jpg"
+    },
+    {
+        "name": "jahneration",
+        "url": "assets/images/jahneration-min.jpg"
+    },
+    {
+        "name": "about",
+        "url": "assets/images/about-min.jpg"
+    },
+    {
+        "name": "lvl",
+        "url": "assets/images/lvl.jpg"
+    }
+]

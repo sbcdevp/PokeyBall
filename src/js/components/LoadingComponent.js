@@ -1,15 +1,11 @@
 import ThreeMainScene from "./ThreeMainScene.js"
 
 import models from "../data/models.json"
-import materials from "../data/materials.json"
-import carboneMaterials from "../data/carboneMaterials.json"
-import aluMaterials from "../data/aluMaterials.json"
-import crocoMaterials from "../data/crocoMaterials.json"
+// import materials from "../data/materials.json"
 
 import {gsap, TweenLite, Power3} from 'gsap'
 
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 
 import * as THREE from 'three';
 
@@ -45,35 +41,30 @@ class LoadingComponent {
     }
 
     _setupLoaders() {
-
-        let dracoLoader = new DRACOLoader();
         this._textureLoader = new THREE.TextureLoader()
-        this._gltfLoader = new GLTFLoader()
-
-        dracoLoader.setDecoderPath('assets/draco/');
-        this._gltfLoader.setDRACOLoader(dracoLoader);
+        this._fbxLoader = new FBXLoader()
     }
 
     _loadAssets() {
-        let totalItems = materials.length;
+        // let totalItems = materials.length;
         
-        for (let i = 0; i < materials.length; i++) {
-            let promise = new Promise(resolve => {
-                this._textureLoader.load(materials[i].url, resolve);
-                this.materials[`${materials[i].name}`] = {};
-            })
-                .then(result => {
-                    this._loadingHandler(materials.length/totalItems * 100);
+        // for (let i = 0; i < materials.length; i++) {
+        //     let promise = new Promise(resolve => {
+        //         this._textureLoader.load(materials[i].url, resolve);
+        //         this.materials[`${materials[i].name}`] = {};
+        //     })
+        //         .then(result => {
+        //             this._loadingHandler(materials.length/totalItems * 100);
 
-                    this.materials[`${materials[i].name}`] = result;
-                });
-            this._promises.push(promise);
-        }
+        //             this.materials[`${materials[i].name}`] = result;
+        //         });
+        //     this._promises.push(promise);
+        // }
 
         for (let i = 0; i < models.length; i++) {
             let promise = new Promise(resolve => {
                 
-                this._gltfLoader.load(models[i].url, resolve);
+                this._fbxLoader.load(models[i].url, resolve);
                 this.models[`${models[i].name}`] = {};
             })
                 .then(result => {
@@ -86,7 +77,7 @@ class LoadingComponent {
     }
 
     _assetsLoadedHandler() {
-    //    this._threeMainScene =  new ThreeMainScene(this.models, this.materials);
+       this._threeMainScene =  new ThreeMainScene(this.models);
     }    
 
     _loadingHandler(progress) {
