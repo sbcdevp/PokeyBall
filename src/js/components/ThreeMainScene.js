@@ -7,6 +7,7 @@ import { gsap, TimelineLite, Power3, TweenLite } from "gsap";
 import lerp from "../utils/lerp"
 import "../utils/tween"
 
+import { Sky } from 'three/examples/jsm/objects/Sky.js'
 
 import * as dat from 'dat.gui';
 import * as OIMO from 'oimo';
@@ -33,6 +34,12 @@ const SETTINGS = {
         x: -10,
         y: 5,
         z: 0
+    },
+    sunController: {
+        turbidity: 5.,
+        rayleigh: 1,
+        inclination: 0.2,
+        azimuth: 1.772,
     }
 }
 
@@ -78,7 +85,7 @@ class ThreeMainScene {
     _setupValues() {
         // this._time = 0;
         this._launchingBallForce = 0;
-        this._isBallStopped = true;
+        this._ballLaunched = false;
 
     }
 
@@ -127,16 +134,23 @@ class ThreeMainScene {
         this._scene = new THREE.Scene();
         this._scene.rotation.y = Math.PI *2 - 0.25;
         
+        let fogColor = new THREE.Color(0x080808);
+        this._scene.background = new THREE.Color( 0xefd1b5 );
+        // this._scene.fog = new THREE.FogExp2( 0xefd1b5, 0.025 );
+
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
         this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z);
         
-        // this._controls = new OrbitControls(this._camera, this._canvas);
+        this._controls = new OrbitControls(this._camera, this._canvas);
 
         this._setupSceneObjects();
     }
 
 
     _setupSceneObjects() {
+        this._skyProperties();
+        this._skyColor();
+
         this._setupGround();
         this._setupTargetBox();
         this._setupBall();
@@ -154,6 +168,29 @@ class ThreeMainScene {
         this._scene.add( this._ground );
     }
 
+    _skyProperties() {
+        this.sky = new Sky();
+        this.sunSphere = new THREE.Mesh(
+            new THREE.SphereBufferGeometry(20000, 16, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        this.skyUniforms = this.sky.material.uniforms;
+        this._scene.add(this.sunSphere, this.sky);
+    }
+
+    _skyColor() {
+        this.sky.scale.setScalar(450000);
+        this.sunSphere.position.x = 40000 * Math.cos(-SETTINGS.sunController.azimuth);
+        this.sunSphere.position.y = 40000 * Math.sin(-SETTINGS.sunController.azimuth) * Math.sin(-SETTINGS.sunController.inclination);
+        this.sunSphere.position.z = 40000 * Math.sin(-SETTINGS.sunController.azimuth) * Math.cos(-SETTINGS.sunController.inclination);
+        this.sunSphere.visible = SETTINGS.sunController.sun;
+        console.log(this.skyUniforms)
+        this.skyUniforms["sunPosition"].value.copy(this.sunSphere.position);
+        this.skyUniforms["turbidity"].value = SETTINGS.sunController.turbidity
+        this.skyUniforms["rayleigh"].value = SETTINGS.sunController.rayleigh
+
+    }
+
     _setupTargetBox() {
         let geometry = new THREE.BoxGeometry( 10, 100, 10 );
         let material = new THREE.MeshBasicMaterial( {color: 0x808080, vertexColors: THREE.FaceColors} );
@@ -168,8 +205,10 @@ class ThreeMainScene {
 
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
-        let material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
+        let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
         this._ball = new THREE.Mesh( geometry, material );
+        this._ball.receiveShadow = true;
+        this._ball.castShadow = true;
         this._ball.position.set(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
         this._scene.add( this._ball );
         this._setupBallPhysics(false);
@@ -211,13 +250,26 @@ class ThreeMainScene {
     }
 
     _setupTrees() {
-        for (let index = 0; index < 3; index++) {
-            this._models[`tree_0${index}`].position.set(Math.random() * 5, 0, Math.random() * 20)
-            this._models[`tree_0${index}`].scale.set(0.06, 0.06, 0.06)
-            this._models[`tree_0${index}`].receiveShadow = true
-            this._models[`tree_0${index}`].castShadow = true
+        for (let index = 0; index < 5; index++) {
+            for (let i = 0; i < 20; i++) {
+                let pos = {
+                    x: Math.random() * 200,
+                    y: 0,
+                    z: Math.random() * 200,
+                }
+                if (i % 2 === 0) {
+                    pos.z = Math.random() * -200;
 
-            this._scene.add(this._models[`tree_0${index}`])
+                }
+                let treeCloned = this._models[`tree_0${index}`].clone();
+                
+                
+                treeCloned.position.set(pos.x, pos.y, pos.z)
+                treeCloned.scale.set(0.06, 0.06, 0.06)
+                treeCloned.receiveShadow = true
+                treeCloned.castShadow = true
+                this._scene.add(treeCloned)
+            }
         }
     }
 
@@ -229,7 +281,9 @@ class ThreeMainScene {
     }
 
     _launchBall() {
-        this._isBallStopped = false;
+        if(this._ballLaunched) return;
+        this._ballLaunched = true;
+
         this._setupBallPhysics(true)
 
         TweenLite.to(this._ballStick.scale, 0.1, {x: 0, y: 0, z: 0, ease: Power3.easeInOut})
@@ -239,9 +293,9 @@ class ThreeMainScene {
     }
 
     _stopBall() {
+        this._ballLaunched = false;
         TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
 
-        this._isBallStopped = true;
         this._ballBody.setPosition(this._ball.position)
         this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
 
@@ -257,11 +311,15 @@ class ThreeMainScene {
     _render() {
         this._oimoWorld.step();
 
-        this._cameraFollowUpdate();
+        // this._cameraFollowUpdate();
+
+        if(this._ballLaunched) {
+            this._ball.rotation.y += 0.3 
+        }
 
         if(this._ballBody.pos.y < -10) {
-            this._setupBallPhysics(false)
             this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
+            // this._setupBallPhysics(false)
         }
 
         this._ball.position.copy( this._ballBody.getPosition() );
@@ -296,7 +354,7 @@ class ThreeMainScene {
     }
 
     _panStartHandler(panEvent) {
-        console.log(panEvent)
+        // console.log(panEvent)
     }
 
     _panMoveHandler(panEvent) {
@@ -315,6 +373,7 @@ class ThreeMainScene {
 
     _panEndHandler() {
         this._launchBall();
+
     }
 
     _settingsChangedHandler() {
