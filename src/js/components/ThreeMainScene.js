@@ -86,7 +86,8 @@ class ThreeMainScene {
         // this._time = 0;
         this._launchingBallForce = 0;
         this._ballLaunched = false;
-
+        this._holes = [];
+        this._ballResetOnClick = false;
     }
 
     _setupHammer() {
@@ -204,14 +205,14 @@ class ThreeMainScene {
 
     _setupObstacles() {
         let geometry = new THREE.BoxBufferGeometry( 12, 10, 12 );
-        let firstMaterial = new THREE.MeshBasicMaterial( {color: 0x272727, vertexColors: THREE.FaceColors} );
-        let secondMaterial = new THREE.MeshBasicMaterial( {color: 0x272727, vertexColors: THREE.FaceColors} );
+        let firstMaterial = new THREE.MeshBasicMaterial( {color: 0x000000} );
+        let secondMaterial = new THREE.MeshBasicMaterial( {color: 0xaa1515} );
 
         this._firstObstacle = new THREE.Mesh( geometry, firstMaterial );
         this._secondObstacle = new THREE.Mesh( geometry, secondMaterial );
 
-        this._firstObstacle.position.set(0, Math.random() * 100, 0)
-        this._secondObstacle.position.set(0, Math.random() * 100, 0)
+        this._firstObstacle.position.set(0, Math.random() * 100 + 20, 0)
+        this._secondObstacle.position.set(0, Math.random() * 100 + 25, 0)
         this._scene.add( this._firstObstacle, this._secondObstacle );
     }
 
@@ -259,6 +260,7 @@ class ThreeMainScene {
         circle.rotation.y = Math.PI / 2
         circle.position.set(this._ballStick.position.x + 2.45, this._ballStick.position.y, this._ballStick.position.z)
         this._scene.add( circle );
+        this._holes.push(circle)
     }
 
     _setupTrees() {
@@ -304,10 +306,12 @@ class ThreeMainScene {
     }
 
     _stopBall() {
-        this._ballLaunched = false;
-        if(this._cantClick) {
+        if(this._ballCantClick) {
             this._ballBody.applyImpulse({x: 0, y: -100, z: 0}, {x: 0, y: -100, z: 0})
+        } else if (this._ballResetOnClick) {
+            this._resetBall();
         } else {
+            this._ballLaunched = false;
             TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
             
             this._ballBody.setPosition(this._ball.position)
@@ -316,6 +320,20 @@ class ThreeMainScene {
             this._setupBallPhysics(false)
             this._setupStickHole()
         }
+    }
+
+    _resetBall() {
+        this._holes.forEach(element => {
+            this._scene.remove(element);
+            element.geometry.dispose();
+            element.material.dispose();
+        });
+
+        this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
+        setTimeout(() => {
+            this._stopBall();
+        }, 100);
+        this._ballResetOnClick = false
     }
 
     _animate() {
@@ -327,22 +345,22 @@ class ThreeMainScene {
         this._oimoWorld.step();
 
         this._cameraFollowUpdate();
-        console.log(this._ballBody.pos.y > this._firstObstacle.position.y - 1 && this._ballBody.pos.y < this._firstObstacle.position.y + 1)
+    
         if(this._ballLaunched) {
             this._ball.rotation.y += 0.3
-            // if(this._ball.position)
-            if(this._ballBody.pos.y > this._firstObstacle.position.y - 1 && this._ballBody.pos.y < this._firstObstacle.position.y + 1) {
-                this._cantClick = true;
-            } else {
-                this._cantClick = false;
+            if(this._ballBody.pos.y > this._firstObstacle.position.y - 5 && this._ballBody.pos.y < this._firstObstacle.position.y + 5) {
+                this._ballCantClick = true;
+            } else if (this._ballBody.pos.y > this._secondObstacle.position.y - 5 && this._ballBody.pos.y < this._secondObstacle.position.y + 5) {
+                this._ballResetOnClick = true;
+            }
+            else {
+                this._ballCantClick = false;
+                this._ballResetOnClick = false;
             }
         }
 
-        if(this._ballBody.pos.y < -10) {
-            this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
-            setTimeout(() => {
-                this._setupBallPhysics(false);
-            }, 100);
+        if(this._ballBody.pos.y < -2) {
+            this._resetBall()
         }
 
         this._ball.position.copy( this._ballBody.getPosition() );
