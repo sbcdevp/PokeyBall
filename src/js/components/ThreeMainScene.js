@@ -46,8 +46,11 @@ const SETTINGS = {
         blackBoxHeight: 5,
         redBoxHeight: 8,
         firstTargetBoxHeight: 50,
-        secondTargetBoxHeight: 200, 
-        movingTargetBoxHeight: 15
+        secondTargetBoxHeight: 350, 
+        movingTargetBoxHeight: 15,
+        blueWinBoxHeight: 5,
+        yellowWinBoxHeight: 3.5,
+        greenWinBoxHeight: 2
     }
 }
 
@@ -133,10 +136,10 @@ class ThreeMainScene {
         this._oimoWorld = new OIMO.World({ 
             timestep: 1/60, 
             iterations: 8, 
-            broadphase: 2, // 1 brute force, 2 sweep and prune, 3 volume tree
-            worldscale: 1, // scale full world 
-            random: false,  // randomize sample
-            info: false,   // calculate statistic or not
+            broadphase: 2,
+            worldscale: 1,
+            random: false,
+            info: false,
             gravity: [0,-9.8,0] 
         });
     }
@@ -176,6 +179,7 @@ class ThreeMainScene {
         this._setupTrees();
         this._setupLights();
         this._setupBonusCoins()
+        this._setupWinTargets();
     }
 
     _skyProperties() {
@@ -197,7 +201,6 @@ class ThreeMainScene {
         this.skyUniforms["sunPosition"].value.copy(this.sunSphere.position);
         this.skyUniforms["turbidity"].value = SETTINGS.sunController.turbidity
         this.skyUniforms["rayleigh"].value = SETTINGS.sunController.rayleigh
-
     }
 
     _setupGround() {
@@ -212,8 +215,6 @@ class ThreeMainScene {
         let firstGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.firstTargetBoxHeight, 10 );
         let geometryMoving = new THREE.BoxGeometry( 10, SETTINGS.obstacles.movingTargetBoxHeight, 10 );
         let secondGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.secondTargetBoxHeight, 10 );
-
-
 
         let material = new THREE.MeshBasicMaterial( {color: 0xFFF2F2, vertexColors: THREE.FaceColors} );
         let materialMoving = new THREE.MeshBasicMaterial( {color: 0xF6C7C7, vertexColors: THREE.FaceColors} );
@@ -231,9 +232,8 @@ class ThreeMainScene {
         this._secondTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
 
         this._firstTargetBox.position.set(0, 25, 0)
-        this._movingTargetBox.position.set(0, 90, 0)
-        this._secondTargetBox.position.set(0, 250, 0)
-
+        this._movingTargetBox.position.set(0, 150, 0)
+        this._secondTargetBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 35, 0)
 
         this._scene.add( this._firstTargetBox, this._movingTargetBox, this._secondTargetBox );
     }
@@ -248,18 +248,36 @@ class ThreeMainScene {
         let blackObstacle = new THREE.Mesh( blackGeometry, blackMaterial );
         let redObstacle = new THREE.Mesh( redGeometry, redMaterial );
 
-        for (let index = 0; index < 6; index++) {
+        for (let index = 0; index < 10; index++) {
             let blackObstacleCloned = blackObstacle.clone()
             let redObstacleCloned = redObstacle.clone()
-            
-            blackObstacleCloned.position.set(0, 40 + index * 20, 0)
-            redObstacleCloned.position.set(0, 150  + index * 30, 0)
+            blackObstacleCloned.position.set(0, 40 + index * 10, 0)
+            redObstacleCloned.position.set(0, 190  + index * 30, 0)
 
             this._blackObstacles.push(blackObstacleCloned)
             this._redObstacles.push(redObstacleCloned)
 
             this._scene.add( blackObstacleCloned, redObstacleCloned );
         }
+    }
+
+    _setupWinTargets() {
+        let blueGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.blueWinBoxHeight, 10.1 );
+        let yellowGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.yellowWinBoxHeight, 10.1 );
+        let greenGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.greenWinBoxHeight, 10.1 );
+
+        let blueMaterial = new THREE.MeshBasicMaterial( {color: 0x0086FF} );
+        let yellowMaterial = new THREE.MeshBasicMaterial( {color: 0xFFD400} );
+        let greenMaterial = new THREE.MeshBasicMaterial( {color: 0x45A827} );
+
+        let blueBox = new THREE.Mesh( blueGeometry, blueMaterial );
+        let yellowBox = new THREE.Mesh( yellowGeometry, yellowMaterial );
+        let greenBox = new THREE.Mesh( greenGeometry, greenMaterial );     
+
+        blueBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150, 0)
+        greenBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150 + SETTINGS.obstacles.blueWinBoxHeight -SETTINGS.obstacles.greenWinBoxHeight / 2, 0)
+        yellowBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150 + SETTINGS.obstacles.blueWinBoxHeight + SETTINGS.obstacles.greenWinBoxHeight, 0)
+        this._scene.add(blueBox, yellowBox, greenBox)
     }
 
     _setupBall() {
@@ -304,7 +322,7 @@ class ThreeMainScene {
         let material = new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide } );
         let circle = new THREE.Mesh( geometry, material );
         circle.rotation.y = Math.PI / 2
-        circle.position.set(this._ballStick.position.x + 2.45, this._ballStick.position.y, this._ballStick.position.z)
+        circle.position.set(this._ballStick.position.x + 2.40, this._ballStick.position.y, this._ballStick.position.z)
         this._scene.add( circle );
         this._holes.push(circle)
     }
@@ -335,9 +353,9 @@ class ThreeMainScene {
     }
 
     _setupLights() {
-        let directionnalLight = new THREE.DirectionalLight( 0x404040, 2 );
+        let directionnalLight = new THREE.DirectionalLight( 0x404040, 1 );
         let ambientLight = new THREE.AmbientLight( 0x404040, 2 );
-
+        directionnalLight.position.set(-10, 10, 0)
         this._scene.add( directionnalLight, ambientLight );
     }
 
@@ -352,7 +370,7 @@ class ThreeMainScene {
         for (let index = 0; index < 10; index++) {
             let cylinderCloned = cylinder.clone()
             if(index % 2 === 0) {
-                cylinderCloned.position.set(-10, 200 + index * 3, 0)
+                cylinderCloned.position.set(-10, 250 + index * 3, 0)
             } else {
                 cylinderCloned.position.set(-10, 10 + index * 3, 0)
             }
@@ -424,11 +442,12 @@ class ThreeMainScene {
                 }
                 if (this._activeRedObstacle && this._ballBody.pos.y > this._activeRedObstacle.position.y - SETTINGS.obstacles.redBoxHeight / 2 && this._ballBody.pos.y < this._activeRedObstacle.position.y + SETTINGS.obstacles.redBoxHeight / 2) {
                     this._ballResetOnClick = true;
-                }else {
+                } else {
+                    this._activeRedObstacle = null
                     this._ballResetOnClick = false;
             } 
         })  
-            if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 ) {
+            if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox + SETTINGS.obstacles.secondTargetBoxHeight) {
                 this._ballCantClick = true;
             }
         }
@@ -466,11 +485,6 @@ class ThreeMainScene {
         this._cameraFollowUpdate();
         
         this._testCollisions();
-
-        
-
-        
-
 
         this._coins.forEach(coin => {
             coin.rotation.y += 0.01
