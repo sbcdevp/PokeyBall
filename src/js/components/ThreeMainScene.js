@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
 import { gsap, TimelineLite, Power3, TweenLite } from "gsap";
+import Stats from "stats.js"
 
 import lerp from "../utils/lerp"
 import "../utils/tween"
@@ -84,7 +85,7 @@ class ThreeMainScene {
         this._setupPhysics();
 
         this._setupScene();
-
+        this._setupStats()
         this._animate();
         this._resize();
     }
@@ -146,7 +147,6 @@ class ThreeMainScene {
         this._scene = new THREE.Scene();
         this._scene.rotation.y = Math.PI *2 - 0.25;
         
-        // this._scene.background = new THREE.Color( 0xF2CB73 );
         this._scene.fog = new THREE.FogExp2( 0xB3B3B3, 0.001 );
 
         this._camera = new THREE.PerspectiveCamera(60, this._canvasSize.width/ this._canvasSize.height, 1, 5000);
@@ -157,6 +157,11 @@ class ThreeMainScene {
         this._setupSceneObjects();
     }
 
+    _setupStats() {
+        this._stats = new Stats();
+        this._stats.showPanel( 0 );
+        document.body.appendChild( this._stats.dom );
+    }
 
     _setupSceneObjects() {
         this._skyProperties();
@@ -269,7 +274,7 @@ class ThreeMainScene {
     }
 
     _setupBallStick() {
-        let geometry = new THREE.CylinderGeometry( 0.1, 0.1, 5, 32 );
+        let geometry = new THREE.CylinderBufferGeometry( 0.1, 0.1, 5, 32 );
         let material = new THREE.MeshBasicMaterial( {color: 0xFFE403} );
         this._ballStick = new THREE.Mesh( geometry, material );
         this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
@@ -286,8 +291,8 @@ class ThreeMainScene {
             pos:[this._ball.position.x, this._ball.position.y, this._ball.position.z],
             rot:[0, 0, 0],
             move: isMoving,
-            density: 1,
-            friction: 0.2,
+            density: 0.6,
+            friction: 0.6,
             restitution: 0.2,
             belongsTo: 0,
             collidesWith: 0
@@ -311,7 +316,7 @@ class ThreeMainScene {
             tree.receiveShadow = true
             tree.castShadow = true
 
-            for (let i = 0; i < 200; i++) {
+            for (let i = 0; i < 50; i++) {
                 let treeCloned = tree.clone();
 
                 let pos = {
@@ -344,7 +349,7 @@ class ThreeMainScene {
         cylinder.receiveShadow = true
         cylinder.castShadow = true
 
-        for (let index = 0; index < 30; index++) {
+        for (let index = 0; index < 10; index++) {
             let cylinderCloned = cylinder.clone()
             if(index % 2 === 0) {
                 cylinderCloned.position.set(-10, 200 + index * 3, 0)
@@ -453,6 +458,7 @@ class ThreeMainScene {
     }
 
     _render() {
+        this._stats.begin();
         this._oimoWorld.step();
 
         this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
@@ -461,6 +467,11 @@ class ThreeMainScene {
         
         this._testCollisions();
 
+        
+
+        
+
+
         this._coins.forEach(coin => {
             coin.rotation.y += 0.01
         });
@@ -468,6 +479,8 @@ class ThreeMainScene {
         this._ball.position.copy( this._ballBody.getPosition() );
 
         this._renderer.render(this._scene, this._camera)
+        this._stats.end();
+
     }
 
     _resize() {
