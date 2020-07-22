@@ -327,11 +327,11 @@ class ThreeMainScene {
         this._oimoWorld.step();
 
         this._cameraFollowUpdate();
-
+        console.log(this._ballBody.pos.y > this._firstObstacle.position.y - 1 && this._ballBody.pos.y < this._firstObstacle.position.y + 1)
         if(this._ballLaunched) {
             this._ball.rotation.y += 0.3
             // if(this._ball.position)
-            if(this._ballBody.pos.y < this._firstObstacle.position.y - 5 || this._ballBody.pos.y < this._firstObstacle.position.y + 5) {
+            if(this._ballBody.pos.y > this._firstObstacle.position.y - 1 && this._ballBody.pos.y < this._firstObstacle.position.y + 1) {
                 this._cantClick = true;
             } else {
                 this._cantClick = false;
@@ -340,7 +340,9 @@ class ThreeMainScene {
 
         if(this._ballBody.pos.y < -10) {
             this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
-            // this._setupBallPhysics(false)
+            setTimeout(() => {
+                this._setupBallPhysics(false);
+            }, 100);
         }
 
         this._ball.position.copy( this._ballBody.getPosition() );
@@ -394,7 +396,6 @@ class ThreeMainScene {
 
     _panEndHandler() {
         this._launchBall();
-
     }
 
     _settingsChangedHandler() {
