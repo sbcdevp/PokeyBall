@@ -43,7 +43,10 @@ const SETTINGS = {
     },
     obstacles: {
         blackBoxHeight: 5,
-        redBoxHeight: 8
+        redBoxHeight: 8,
+        firstTargetBoxHeight: 50,
+        secondTargetBoxHeight: 200, 
+        movingTargetBoxHeight: 15
     }
 }
 
@@ -201,33 +204,33 @@ class ThreeMainScene {
     }
 
     _setupTargetBox() {
-        let firstGeometry = new THREE.BoxGeometry( 10, 50, 10 );
-        let thirdgeometry = new THREE.BoxGeometry( 10, 200, 10 );
+        let firstGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.firstTargetBoxHeight, 10 );
+        let geometryMoving = new THREE.BoxGeometry( 10, SETTINGS.obstacles.movingTargetBoxHeight, 10 );
+        let secondGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.secondTargetBoxHeight, 10 );
 
-        let geometryMoving = new THREE.BoxGeometry( 10, 15, 10 );
 
 
         let material = new THREE.MeshBasicMaterial( {color: 0xFFF2F2, vertexColors: THREE.FaceColors} );
         let materialMoving = new THREE.MeshBasicMaterial( {color: 0xF6C7C7, vertexColors: THREE.FaceColors} );
 
         this._firstTargetBox = new THREE.Mesh( firstGeometry, material );
-        this._secondTargetBox = new THREE.Mesh( geometryMoving, materialMoving );
-        this._thirdTargetBox = new THREE.Mesh( thirdgeometry, material );
+        this._movingTargetBox = new THREE.Mesh( geometryMoving, materialMoving );
+        this._secondTargetBox = new THREE.Mesh( secondGeometry, material );
 
 
         this._firstTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
         this._firstTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
+        this._movingTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
+        this._movingTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
         this._secondTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
         this._secondTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
-        this._thirdTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
-        this._thirdTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
 
         this._firstTargetBox.position.set(0, 25, 0)
-        this._secondTargetBox.position.set(0, 90, 0)
-        this._thirdTargetBox.position.set(0, 250, 0)
+        this._movingTargetBox.position.set(0, 90, 0)
+        this._secondTargetBox.position.set(0, 250, 0)
 
 
-        this._scene.add( this._firstTargetBox, this._secondTargetBox, this._thirdTargetBox );
+        this._scene.add( this._firstTargetBox, this._movingTargetBox, this._secondTargetBox );
     }
 
     _setupObstacles() {
@@ -420,14 +423,17 @@ class ThreeMainScene {
                     this._ballResetOnClick = false;
             } 
         })  
+            if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 ) {
+                this._ballCantClick = true;
+            }
         }
 
         if(this._ballBody.pos.y < 0.5) {
             this._resetBall()
         }
 
-        if(this._ballBody.pos.y > this._secondTargetBox.position.y - 5 && this._ballBody.pos.y < this._secondTargetBox.position.y + 5 && !this._ballLaunched){
-            this._ballBody.pos.z = this._secondTargetBox.position.z
+        if(this._ballBody.pos.y > this._movingTargetBox.position.y - 5 && this._ballBody.pos.y < this._movingTargetBox.position.y + 5 && !this._ballLaunched){
+            this._ballBody.pos.z = this._movingTargetBox.position.z
             this._ballStick.position.z = this._ballBody.pos.z
             this._holes[this._holes.length - 1].position.z = this._ballStick.position.z
         }
@@ -449,7 +455,7 @@ class ThreeMainScene {
     _render() {
         this._oimoWorld.step();
 
-        this._secondTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
+        this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
 
         this._cameraFollowUpdate();
         
