@@ -33,7 +33,7 @@ const SETTINGS = {
     },
     ballPosition: {
         x: -10,
-        y: 100,
+        y: 214,
         z: 0
     },
     sunController: {
@@ -45,12 +45,12 @@ const SETTINGS = {
     obstacles: {
         blackBoxHeight: 5,
         redBoxHeight: 8,
-        firstTargetBoxHeight: 250,
-        secondTargetBoxHeight: 350, 
-        movingTargetBoxHeight: 15,
+        firstTargetBoxHeight: 470,
+        secondTargetBoxHeight: 20, 
+        thirdTargetBoxHeight: 50,
         blueWinBoxHeight: 5,
         yellowWinBoxHeight: 3.5,
-        greenWinBoxHeight: 2
+        greenWinBoxHeight: 3
     }
 }
 
@@ -68,7 +68,6 @@ class ThreeMainScene {
         }
         this._setup();
 
-        
         const gui = new dat.GUI();
 
         let cameraSettings = gui.addFolder('cameraSettings');
@@ -94,7 +93,6 @@ class ThreeMainScene {
     }
 
     _setupValues() {
-        // this._time = 0;
         this._launchingBallForce = 0;
         this._ballLaunched = false;
         this._holes = [];
@@ -102,7 +100,7 @@ class ThreeMainScene {
         this._blackObstacles = [];
         this._redObstacles = [];
 
-        this._targetPositions = [55.5, 99.25];
+        this._targetPositions = [55.5, 99.25, 135, 201.5, 349];
 
         this._ballResetOnClick = false;
     }
@@ -204,29 +202,28 @@ class ThreeMainScene {
 
     _setupTargetBox() {
         let firstGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.firstTargetBoxHeight, 10 );
-        let geometryMoving = new THREE.BoxGeometry( 10, SETTINGS.obstacles.movingTargetBoxHeight, 10 );
         let secondGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.secondTargetBoxHeight, 10 );
+        let thirdGeometry = new THREE.BoxGeometry( 10, SETTINGS.obstacles.thirdTargetBoxHeight, 10 );
 
         let material = new THREE.MeshBasicMaterial( {color: 0xFFF2F2, vertexColors: THREE.FaceColors} );
-        let materialMoving = new THREE.MeshBasicMaterial( {color: 0xF6C7C7, vertexColors: THREE.FaceColors} );
 
         this._firstTargetBox = new THREE.Mesh( firstGeometry, material );
-        this._movingTargetBox = new THREE.Mesh( geometryMoving, materialMoving );
         this._secondTargetBox = new THREE.Mesh( secondGeometry, material );
+        this._thirdTargetBox = new THREE.Mesh( thirdGeometry, material );
 
 
         this._firstTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
         this._firstTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
-        this._movingTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
-        this._movingTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
         this._secondTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
         this._secondTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
-
+        this._thirdTargetBox.geometry.faces[ 9 ].color.setHex( 0xE1D0D0 ); 
+        this._thirdTargetBox.geometry.faces[ 8 ].color.setHex( 0xE1D0D0 );
+        
         this._firstTargetBox.position.set(0, 25, 0)
-        this._movingTargetBox.position.set(0, 150, 0)
-        this._secondTargetBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 35, 0)
+        this._secondTargetBox.position.set(0, 350, 0)
+        this._thirdTargetBox.position.set(0, 440, 0)
 
-        this._scene.add( this._firstTargetBox, this._movingTargetBox, this._secondTargetBox );
+        this._scene.add( this._firstTargetBox, this._secondTargetBox, this._thirdTargetBox );
     }
 
     _setupObstacles() {
@@ -253,11 +250,28 @@ class ThreeMainScene {
         for (let index = 1; index < 3; index++) {
             this._placeObstacles(80, index, 1.4, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
         }
+        
         for (let index = 0; index < this._targetPositions.length; index++) {
             this._setupBoostTargets(this._targetPositions[index])
         }
 
         this._placeObstacles(95, 1, 1.4, redObstacle, SETTINGS.obstacles.redBoxHeight)
+        for (let index = 1; index < 3; index++) {
+            this._placeObstacles(120, index, 2, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
+        }
+
+        for (let index = 1; index < 6; index++) {
+            this._placeObstacles(155, index, 1, redObstacle, SETTINGS.obstacles.redBoxHeight)
+        }
+        this._placeObstacles(197, 1, 1.4, redObstacle, SETTINGS.obstacles.redBoxHeight)
+
+        for (let index = 1; index < 6; index++) {
+            this._placeObstacles(220, index, 1.4, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
+        }
+
+        for (let index = 1; index < 3; index++) {
+            this._placeObstacles(325, index, 2, redObstacle, SETTINGS.obstacles.redBoxHeight)
+        }
     }
 
     _placeObstacles(position, index, padding, obstacleType, height) {
@@ -268,8 +282,8 @@ class ThreeMainScene {
     }
 
     _setupWinTargets() {
-        let blueGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.blueWinBoxHeight, 10.1 );
-        let yellowGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.yellowWinBoxHeight, 10.1 );
+        let blueGeometry = new THREE.BoxBufferGeometry( 12, SETTINGS.obstacles.blueWinBoxHeight, 12 );
+        let yellowGeometry = new THREE.BoxBufferGeometry( 11, SETTINGS.obstacles.yellowWinBoxHeight, 11 );
         let greenGeometry = new THREE.BoxBufferGeometry( 10.1, SETTINGS.obstacles.greenWinBoxHeight, 10.1 );
 
         let blueMaterial = new THREE.MeshBasicMaterial( {color: 0x0086FF} );
@@ -279,11 +293,18 @@ class ThreeMainScene {
         let blueBox = new THREE.Mesh( blueGeometry, blueMaterial );
         let yellowBox = new THREE.Mesh( yellowGeometry, yellowMaterial );
         let greenBox = new THREE.Mesh( greenGeometry, greenMaterial );     
+        
+        let clonedBlueBox = blueBox.clone()
+        let clonedYellowBox = yellowBox.clone()
 
-        blueBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150, 0)
-        greenBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150 + SETTINGS.obstacles.blueWinBoxHeight -SETTINGS.obstacles.greenWinBoxHeight / 2, 0)
-        yellowBox.position.set(0, SETTINGS.obstacles.secondTargetBoxHeight + 150 + SETTINGS.obstacles.blueWinBoxHeight + SETTINGS.obstacles.greenWinBoxHeight, 0)
-        this._scene.add(blueBox, yellowBox, greenBox)
+        blueBox.position.set(0, 429, 0)
+        clonedBlueBox.position.set(0, 443, 0)
+        
+        yellowBox.position.set(0, 433, 0)
+        clonedYellowBox.position.set(0, 439, 0)
+
+        greenBox.position.set(0, 436, 0)
+        this._scene.add(blueBox, clonedBlueBox, yellowBox, clonedYellowBox, greenBox)
     }
 
     _setupBoostTargets(yPosition) {
@@ -294,6 +315,7 @@ class ThreeMainScene {
         circle.position.set(-5.01, yPosition, 0)
         this._scene.add(circle)
     }
+
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
         let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
@@ -322,7 +344,7 @@ class ThreeMainScene {
             velocity: {x: 0, y: 0},
             mass: 5,
             radius: 1, 
-            restitution: -0.7
+            restitution: -0.9
             };
 
             this._Cd = 0.47; 
@@ -393,6 +415,15 @@ class ThreeMainScene {
             this._scene.add( cylinderCloned );
         }
         
+    }
+
+    _setupCheckPoint() {
+        let checkPointGeometry = new THREE.BoxBufferGeometry( 8, 2, 9 );
+        let material = new THREE.MeshBasicMaterial( {color: 0xFFF2F2, vertexColors: THREE.FaceColors} );
+
+        this._checkPointBox = new THREE.Mesh( checkPointGeometry, material );
+        this._checkPointBox.position.set(-8, 214, 0)
+        this._scene.add(this._checkPointBox);
     }
 
     _launchBall() {
@@ -469,12 +500,14 @@ class ThreeMainScene {
             this._resetBall()
         }
 
-        if(this._ballBody.pos.y > this._movingTargetBox.position.y - 5 && this._ballBody.pos.y < this._movingTargetBox.position.y + 5 && !this._ballLaunched){
-            this._ballBody.pos.z = this._movingTargetBox.position.z
-            this._ballStick.position.z = this._ballBody.pos.z
-            this._holes[this._holes.length - 1].position.z = this._ballStick.position.z
+        if(this._ballBody.pos.y > 216 && !this._isCheckpoint) {
+            this._isCheckpoint = true;
+            this._setupCheckPoint();
         }
-
+        if(this._isCheckpoint && this._ballBody.pos.y > 216) {
+            this._ballBody.velocity.y *= this._ballBody.restitution;
+            this._ballBody.pos.y = 216
+        }
         this._coins.forEach(coin => {
             if(coin.position.y < this._ballBody.pos.y && coin.position.z > this._ballBody.pos.z - 1 && coin.position.z < this._ballBody.pos.z + 1) {
                 this._scene.remove(coin);
@@ -509,12 +542,12 @@ class ThreeMainScene {
         this._stats.begin();
 
 
-        this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
+        // this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
 
         this._cameraFollowUpdate();
         this._calculatePhysics();
         this._testCollisions();
-
+        
         this._coins.forEach(coin => {
             coin.rotation.y += 0.01
         });
