@@ -11,7 +11,7 @@ import "../utils/tween"
 import { Sky } from 'three/examples/jsm/objects/Sky.js'
 
 import * as dat from 'dat.gui';
-import * as OIMO from 'oimo';
+
 import Hammer from 'hammerjs';
 
 gsap.registerPlugin();
@@ -33,7 +33,7 @@ const SETTINGS = {
     },
     ballPosition: {
         x: -10,
-        y: 5,
+        y: 100,
         z: 0
     },
     sunController: {
@@ -45,7 +45,7 @@ const SETTINGS = {
     obstacles: {
         blackBoxHeight: 5,
         redBoxHeight: 8,
-        firstTargetBoxHeight: 50,
+        firstTargetBoxHeight: 250,
         secondTargetBoxHeight: 350, 
         movingTargetBoxHeight: 15,
         blueWinBoxHeight: 5,
@@ -55,8 +55,10 @@ const SETTINGS = {
 }
 
 class ThreeMainScene {
-    constructor(models, materials) {
+    constructor(models, textures) {
         this._models = models;
+        this._textures = textures;
+
 
         this._canvas = document.querySelector('.js-canvas');
 
@@ -84,8 +86,6 @@ class ThreeMainScene {
         this._setupListeners();
 
         this._setupRenderer();
-        
-        this._setupPhysics();
 
         this._setupScene();
         this._setupStats()
@@ -101,6 +101,8 @@ class ThreeMainScene {
         this._coins = [];
         this._blackObstacles = [];
         this._redObstacles = [];
+
+        this._targetPositions = [55.5, 99.25];
 
         this._ballResetOnClick = false;
     }
@@ -130,18 +132,6 @@ class ThreeMainScene {
         });
 
         this._renderer.setPixelRatio(3);
-    }
-
-    _setupPhysics() {
-        this._oimoWorld = new OIMO.World({ 
-            timestep: 1/60, 
-            iterations: 8, 
-            broadphase: 2,
-            worldscale: 1,
-            random: false,
-            info: false,
-            gravity: [0,-9.8,0] 
-        });
     }
     
     _setupScene() {
@@ -180,6 +170,7 @@ class ThreeMainScene {
         this._setupLights();
         this._setupBonusCoins()
         this._setupWinTargets();
+        this._setupBoostTargets();
     }
 
     _skyProperties() {
@@ -247,18 +238,33 @@ class ThreeMainScene {
 
         let blackObstacle = new THREE.Mesh( blackGeometry, blackMaterial );
         let redObstacle = new THREE.Mesh( redGeometry, redMaterial );
+        
+        blackObstacle.name = "blackObstacle"
+        redObstacle.name = "redObstacle"
 
-        for (let index = 0; index < 10; index++) {
-            let blackObstacleCloned = blackObstacle.clone()
-            let redObstacleCloned = redObstacle.clone()
-            blackObstacleCloned.position.set(0, 40 + index * 10, 0)
-            redObstacleCloned.position.set(0, 190  + index * 30, 0)
-
-            this._blackObstacles.push(blackObstacleCloned)
-            this._redObstacles.push(redObstacleCloned)
-
-            this._scene.add( blackObstacleCloned, redObstacleCloned );
+        for (let index = 1; index < 4; index++) {
+           this._placeObstacles(20, index, 1.4, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
         }
+        for (let index = 1; index < 3; index++) {
+            this._placeObstacles(37.5, index, 1.5, redObstacle, SETTINGS.obstacles.redBoxHeight)
+        }
+        this._placeObstacles(62.5, 1, 1.4, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
+        this._placeObstacles(66.5, 1, 1.4, redObstacle, SETTINGS.obstacles.redBoxHeight)
+        for (let index = 1; index < 3; index++) {
+            this._placeObstacles(80, index, 1.4, blackObstacle, SETTINGS.obstacles.blackBoxHeight)
+        }
+        for (let index = 0; index < this._targetPositions.length; index++) {
+            this._setupBoostTargets(this._targetPositions[index])
+        }
+
+        this._placeObstacles(95, 1, 1.4, redObstacle, SETTINGS.obstacles.redBoxHeight)
+    }
+
+    _placeObstacles(position, index, padding, obstacleType, height) {
+        let obstacle = obstacleType.clone()
+        obstacle.position.set(0, position + index * height * padding, 0)
+        obstacle.name === "blackObstacle" ? this._blackObstacles.push(obstacle) : this._redObstacles.push(obstacle)
+        this._scene.add( obstacle );
     }
 
     _setupWinTargets() {
@@ -280,6 +286,14 @@ class ThreeMainScene {
         this._scene.add(blueBox, yellowBox, greenBox)
     }
 
+    _setupBoostTargets(yPosition) {
+        let geometry = new THREE.CircleBufferGeometry( 2, 32 );
+        let material = new THREE.MeshBasicMaterial( {  map: this._textures.target, side: THREE.DoubleSide } )
+        let circle = new THREE.Mesh( geometry, material );
+        circle.rotation.y = Math.PI / 2
+        circle.position.set(-5.01, yPosition, 0)
+        this._scene.add(circle)
+    }
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
         let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
@@ -303,18 +317,19 @@ class ThreeMainScene {
     }
 
     _setupBallPhysics(isMoving) {
-        this._ballBody = this._oimoWorld.add({ 
-            type:'sphere', 
-            size:[1,1,1],
-            pos:[this._ball.position.x, this._ball.position.y, this._ball.position.z],
-            rot:[0, 0, 0],
-            move: isMoving,
-            density: 0.6,
-            friction: 0.6,
-            restitution: 0.2,
-            belongsTo: 0,
-            collidesWith: 0
-        });
+        this._ballBody = {
+            pos: {x: SETTINGS.ballPosition.x, y: SETTINGS.ballPosition.y, z: SETTINGS.ballPosition.z},
+            velocity: {x: 0, y: 0},
+            mass: 5,
+            radius: 1, 
+            restitution: -0.7
+            };
+
+            this._Cd = 0.47; 
+            this._rho = 1.22;
+            this._A = Math.PI * this._ballBody.radius * this._ballBody.radius / (10000);
+            this._ag = -100; 
+            this._frameRate = 1/60
     }
 
     _setupStickHole() {
@@ -361,7 +376,7 @@ class ThreeMainScene {
 
     _setupBonusCoins() {
         let geometry = new THREE.CylinderBufferGeometry( 1, 1, 0.3, 32 );
-        let material = new THREE.MeshStandardMaterial( {color: 0xFFDE14} );
+        let material = new THREE.MeshStandardMaterial( {map: this._textures.coin, side: THREE.DoubleSide} );
         let cylinder = new THREE.Mesh( geometry, material );
         cylinder.rotation.z = Math.PI / 2
         cylinder.receiveShadow = true
@@ -384,29 +399,28 @@ class ThreeMainScene {
         if(this._ballLaunched) return;
         this._ballLaunched = true;
 
-        this._setupBallPhysics(true)
-
+        this._ballBody.velocity.y = this._launchingBallForce * 1.2;
         TweenLite.to(this._ballStick.scale, 0.1, {x: 0, y: 0, z: 0, ease: Power3.easeInOut})
         
-        this._ballBody.applyImpulse({x: 0, y: 1, z: 0}, {x: 0, y: 2 * this._launchingBallForce, z: 0})
-        this._launchingBallForce = 0;
     }
 
     _stopBall() {
         if(this._ballCantClick) {
-            this._ballBody.applyImpulse({x: 0, y: -100, z: 0}, {x: 0, y: -100, z: 0})
+            this._ballBody.velocity.y = 0; 
         } else if (this._ballResetOnClick) {
             this._resetBall();
         } else {
             this._ballLaunched = false;
             TweenLite.to(this._ballStick.scale, 0.2, {x: 1, y: 1, z: 1, ease: Power3.easeOut})
             
-            this._ballBody.setPosition(this._ball.position)
+            this._ballBody.pos = {x: this._ball.position.x, y: this._ball.position.y, z: this._ball.position.z}
             this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
             
-            this._setupBallPhysics(false)
+            this._launchingBallForce = 0
+
             this._setupStickHole()
         }
+        console.log(this._ballBody.pos)
     }
 
     _resetBall() {
@@ -416,10 +430,10 @@ class ThreeMainScene {
             element.material.dispose();
         });
 
-        this._ballBody.resetPosition(SETTINGS.ballPosition.x, SETTINGS.ballPosition.y, SETTINGS.ballPosition.z)
+        this._ballBody.pos = {x: SETTINGS.ballPosition.x, y: SETTINGS.ballPosition.y, z: SETTINGS.ballPosition.z}
         setTimeout(() => {
             this._stopBall();
-        }, 100);
+        }, 10);
         this._ballResetOnClick = false
     }
 
@@ -447,12 +461,11 @@ class ThreeMainScene {
                     this._ballResetOnClick = false;
             } 
         })  
-            if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox + SETTINGS.obstacles.secondTargetBoxHeight) {
-                this._ballCantClick = true;
-            }
+        //  if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox + SETTINGS.obstacles.secondTargetBoxHeight) {
+        //         this._ballCantClick = true;
+        //  }
         }
-
-        if(this._ballBody.pos.y < 0.5) {
+        if(this._ballBody.pos.y < -2) {
             this._resetBall()
         }
 
@@ -465,10 +478,26 @@ class ThreeMainScene {
         this._coins.forEach(coin => {
             if(coin.position.y < this._ballBody.pos.y && coin.position.z > this._ballBody.pos.z - 1 && coin.position.z < this._ballBody.pos.z + 1) {
                 this._scene.remove(coin);
-                coin.geometry.dispose();
-                coin.material.dispose();
+                setTimeout(() => {
+                    coin.geometry.dispose();
+                    coin.material.dispose();
+                }, 1000);
             }
         });
+    }
+
+    _calculatePhysics() {
+        if(this._ballLaunched) {
+            let Fy = -0.5 * this._Cd * this._A * this._rho * this._ballBody.velocity.y * this._ballBody.velocity.y * this._ballBody.velocity.y / Math.abs(this._ballBody.velocity.y);
+            
+            Fy = (isNaN(Fy) ? 0 : Fy);
+    
+            let ay = this._ag + (Fy / this._ballBody.mass);
+    
+            this._ballBody.velocity.y += ay * this._frameRate
+        
+            this._ballBody.pos.y += this._ballBody.velocity.y*0.01;
+        }
     }
 
     _animate() {
@@ -478,20 +507,20 @@ class ThreeMainScene {
 
     _render() {
         this._stats.begin();
-        this._oimoWorld.step();
+
 
         this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
 
         this._cameraFollowUpdate();
-        
+        this._calculatePhysics();
         this._testCollisions();
 
         this._coins.forEach(coin => {
             coin.rotation.y += 0.01
         });
 
-        this._ball.position.copy( this._ballBody.getPosition() );
-
+        this._ball.position.copy( new THREE.Vector3(this._ballBody.pos.x, this._ballBody.pos.y, this._ballBody.pos.z ));
+    
         this._renderer.render(this._scene, this._camera)
         this._stats.end();
 
@@ -537,7 +566,7 @@ class ThreeMainScene {
             this._launchingBallForce += 0.5
         }
 
-        TweenLite.to(this._ballBody.pos, 1, {y: this._ballBody.pos.y + this._launchingBallForce})
+        // this._ballBody.pos.y = this._ballBody.pos.y + this._launchingBallForce
         this._launchingBallForce = panEvent.deltaY * 0.2;
     }
 

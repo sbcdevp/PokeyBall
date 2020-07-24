@@ -1,7 +1,7 @@
 import ThreeMainScene from "./ThreeMainScene.js"
 
 import models from "../data/models.json"
-// import materials from "../data/materials.json"
+import textures from "../data/textures.json"
 
 import {gsap, TweenLite, Power3} from 'gsap'
 
@@ -20,7 +20,7 @@ class LoadingComponent {
         this._promises = [];
         this.models = {}; 
         this._progress = 0
-        this.materials = {}; 
+        this.textures = {}; 
 
         this._ui = {
             mainContainer: document.querySelector(".js-container"),
@@ -48,18 +48,18 @@ class LoadingComponent {
     _loadAssets() {
         // let totalItems = materials.length;
         
-        // for (let i = 0; i < materials.length; i++) {
-        //     let promise = new Promise(resolve => {
-        //         this._textureLoader.load(materials[i].url, resolve);
-        //         this.materials[`${materials[i].name}`] = {};
-        //     })
-        //         .then(result => {
-        //             this._loadingHandler(materials.length/totalItems * 100);
+        for (let i = 0; i < textures.length; i++) {
+            let promise = new Promise(resolve => {
+                this._textureLoader.load(textures[i].url, resolve);
+                this.textures[`${textures[i].name}`] = {};
+            })
+                .then(result => {
+                    // this._loadingHandler(textures.length/totalItems * 100);
 
-        //             this.materials[`${materials[i].name}`] = result;
-        //         });
-        //     this._promises.push(promise);
-        // }
+                    this.textures[`${textures[i].name}`] = result;
+                });
+            this._promises.push(promise);
+        }
 
         for (let i = 0; i < models.length; i++) {
             let promise = new Promise(resolve => {
@@ -77,7 +77,7 @@ class LoadingComponent {
     }
 
     _assetsLoadedHandler() {
-       this._threeMainScene =  new ThreeMainScene(this.models);
+       this._threeMainScene =  new ThreeMainScene(this.models, this.textures);
     }    
 
     _loadingHandler(progress) {
