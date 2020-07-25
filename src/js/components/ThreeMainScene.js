@@ -68,15 +68,6 @@ class ThreeMainScene {
         this._ui = {
         }
         this._setup();
-
-        const gui = new dat.GUI();
-
-        let cameraSettings = gui.addFolder('cameraSettings');
-
-        cameraSettings.add(SETTINGS.cameraPosition, 'x').min(0).max(10).step(0.001).onChange(() => this._settingsChangedHandler())
-        cameraSettings.add(SETTINGS.cameraPosition, 'y').min(0).max(10).step(0.001).onChange(() => this._settingsChangedHandler())
-        cameraSettings.add(SETTINGS.cameraPosition, 'z').min(0).max(10).step(0.001).onChange(() => this._settingsChangedHandler())
-
     }
 
     _setup() {
@@ -100,6 +91,7 @@ class ThreeMainScene {
         this._coins = [];
         this._blackObstacles = [];
         this._redObstacles = [];
+        this._startPanY = 0;
 
         this._targetPositions = [55.5, 99.25, 135, 201.5, 349];
 
@@ -207,6 +199,7 @@ class ThreeMainScene {
         let directionnalLight = new THREE.DirectionalLight( 0x404040, 1 );
         let ambientLight = new THREE.AmbientLight( 0x404040, 2 );
         directionnalLight.position.set(-10, 10, 0)
+
         this._scene.add( directionnalLight, ambientLight );
     }
 
@@ -316,8 +309,6 @@ class ThreeMainScene {
         this._scene.add( obstacle );
     }
 
-   
-
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
         let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
@@ -330,13 +321,22 @@ class ThreeMainScene {
     }
 
     _setupBallStick() {
-        let geometry = new THREE.CylinderBufferGeometry( 0.1, 0.1, 5, 32 );
-        let material = new THREE.MeshBasicMaterial( {color: 0xFFE403} );
-        this._ballStick = new THREE.Mesh( geometry, material );
-        this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x + 2.5, this._ball.position.y, this._ball.position.z));
-        this._ballStick.rotation.x = Math.PI / 2;
-        this._ballStick.rotation.z = Math.PI / 2;
+        this._startStickV = new THREE.Vector3(-3.5, 0.25, 0);
+        this._middleStickV = new THREE.Vector3(0, -0.5, 0);
+        this._endStickV = new THREE.Vector3(0, 0.5, 0);
 
+        let curveQuad = new THREE.QuadraticBezierCurve3(this._startStickV, this._middleStickV , this._endStickV);
+
+        let tube = new THREE.TubeGeometry(curveQuad, 64, 0.1, 8, false);
+        this._ballStick = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({color: 0xFFE403, side: THREE.DoubleSide}));
+        this._ballStick.position.copy( new THREE.Vector3(this._ball.position.x, this._ball.position.y, this._ball.position.z));
+        // this._ballStick.rotation.x = Math.PI / 2;
+        this._ballStick.rotation.z = Math.PI
+        // let geometry = new THREE.CylinderBufferGeometry( 0.1, 0.1, 5, 32 );
+        // let geometry = new THREE.TubeGeometry( this._stickPath(10), 20, 2, 8, false );
+        // let material = new THREE.MeshBasicMaterial( {color: 0xFFE403} );
+        // this._ballStick = new THREE.Mesh( geometry, material );
+        
         this._scene.add( this._ballStick );
     }
 
@@ -478,9 +478,7 @@ class ThreeMainScene {
         if(this._ballLaunched) {
             // this._ball.rotation.y += 0.3
      
-        //  if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._movingTargetBox.position.y - SETTINGS.obstacles.movingTargetBoxHeight / 2 || this._ballBody.pos.y > this._movingTargetBox.position.y + SETTINGS.obstacles.movingTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox + SETTINGS.obstacles.secondTargetBoxHeight) {
-        //         this._ballCantClick = true;
-        //  }
+        
         }
         if(this._ballBody.pos.y < -2) {
             this._resetBall()
@@ -533,6 +531,10 @@ class ThreeMainScene {
             this._activeRedObstacle = null
             this._ballResetOnClick = false;
         } 
+
+         if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox.position.y + SETTINGS.obstacles.secondTargetBoxHeight / 2 && this._ballBody.pos.y < this._thirdTargetBox.position.y - SETTINGS.obstacles.thirdTargetBoxHeight / 2 || this._ballBody.pos.y > this._thirdTargetBox.position.y + SETTINGS.obstacles.thirdTargetBoxHeight / 2) {
+                this._ballCantClick = true;
+         }
     }
 
     _calculatePhysics() {
@@ -557,6 +559,9 @@ class ThreeMainScene {
     _render() {
         this._stats.begin();
 
+        if(this._isPanStart && this._startPanY > -30) {
+            this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.13, 0.1)
+        }
 
         // this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
 
@@ -610,33 +615,31 @@ class ThreeMainScene {
     }
 
     _panStartHandler(panEvent) {
-        // console.log(panEvent)
+        this._startPanY = 0;
+        this._isPanStart = true;
     }
 
     _panMoveHandler(panEvent) {
         this._launchingBallForce = 0
 
         if(panEvent.direction === 16 && panEvent.deltaY > 10) {
-        this._launchingBallForce -= 0.5
-
-        } else if ( panEvent.direction === 8 && panEvent.deltaY > 0) {
-            this._launchingBallForce += 0.5
+            this._startPanY -= 0.5
+        }else if ( panEvent.direction === 8 && panEvent.deltaY > 0) {
+            this._startPanY += 0.5
         }
-
-        // TweenLite.to(this._ballBody.pos, 0.5, {y: this._launchingBallForce * 0.005})
-        this._launchingBallForce = panEvent.deltaY * 0.2;
-        this._ballBody.pos.y = this._ballBody.pos.y + this._launchingBallForce * -0.0005
-        console.log(this._launchingBallForce)
+        if(this._startPanY > -20) {
+            this._launchingBallForce = this._startPanY * -14;
+        } else {
+            this._launchingBallForce = 130;
+        }
     }
 
     _panEndHandler() {
         this._ballBody.pos.y = this._ball.position.y
+        this._isPanStart = false;
         this._launchBall();
     }
 
-    _settingsChangedHandler() {
-        this._camera.position.set(SETTINGS.cameraPosition.x, SETTINGS.cameraPosition.y, SETTINGS.cameraPosition.z )
-    }
 }
 
 export default ThreeMainScene;

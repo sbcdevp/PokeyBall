@@ -25,17 +25,17 @@ class LoadingComponent {
         this._ui = {
             mainContainer: document.querySelector(".js-container"),
             loader: document.querySelector(".js-loader"),
-            textLoader: document.querySelector(".js-text-loader"),
+            textLoader: document.querySelector(".js-loader-text"),
         }
         this._tweenObject = {
             value: 0
         }
 
+        this._ui.loader.style.visibility = "visible"
         this._isFinished = false;
 
         this._modelsLoaded = 0; 
 
-        this._ui.loader.style.visibility = "visible";
         this._setupLoaders();
         this._loadAssets().then(() => this._assetsLoadedHandler());
     }
@@ -46,7 +46,7 @@ class LoadingComponent {
     }
 
     _loadAssets() {
-        // let totalItems = materials.length;
+        let totalItems = models.length;
         
         for (let i = 0; i < textures.length; i++) {
             let promise = new Promise(resolve => {
@@ -54,7 +54,7 @@ class LoadingComponent {
                 this.textures[`${textures[i].name}`] = {};
             })
                 .then(result => {
-                    // this._loadingHandler(textures.length/totalItems * 100);
+                    this._loadingHandler(models.length/totalItems * 100);
 
                     this.textures[`${textures[i].name}`] = result;
                 });
@@ -93,8 +93,7 @@ class LoadingComponent {
         if(!this._isFinished) {
             
             this._isFinished = true;
-            TweenLite.to(this._ui.loader, 1, {height: 0, ease: Power3.easeInOut, display: "none", delay: 5})
-            this._ui.colorContainer.classList.add("active")
+            TweenLite.to(this._ui.loader, 1, {height: 0, ease: Power3.easeInOut, display: "none", delay: 1})
             this._ui.mainContainer.style.visibility = "visible";
         }
     }
