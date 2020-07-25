@@ -6,5 +6,9 @@
     {
         "name": "coin",
         "url": "assets/textures/coin.png"
+    },
+    {
+        "name": "ball",
+        "url": "assets/textures/ball.jpg"
     }
 ]

@@ -45,7 +45,7 @@ const SETTINGS = {
     obstacles: {
         blackBoxHeight: 5,
         redBoxHeight: 8,
-        firstTargetBoxHeight: 470,
+        firstTargetBoxHeight: 475,
         secondTargetBoxHeight: 20, 
         thirdTargetBoxHeight: 50,
         blueWinBoxHeight: 5,
@@ -93,7 +93,7 @@ class ThreeMainScene {
         this._redObstacles = [];
         this._startPanY = 0;
 
-        this._targetPositions = [55.5, 99.25, 135, 201.5, 349];
+        this._targetPositions = [55.5, 99.25, 135, 201.5, 260, 349];
 
         this._ballResetOnClick = false;
     }
@@ -311,7 +311,12 @@ class ThreeMainScene {
 
     _setupBall() {
         let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
-        let material = new THREE.MeshLambertMaterial( {color: 0xff0000} );
+        let material = new THREE.MeshPhongMaterial( { 
+            color: 0xffffff,
+            specular: 0xffffff,
+            shininess: 50,
+            map: this._textures.ball
+        } ) 
         this._ball = new THREE.Mesh( geometry, material );
         this._ball.receiveShadow = true;
         this._ball.castShadow = true;
@@ -476,11 +481,6 @@ class ThreeMainScene {
     }
 
     _checkPointCollisions() {
-        if(this._ballLaunched) {
-            // this._ball.rotation.y += 0.3
-     
-        
-        }
         if(this._ballBody.pos.y < -2) {
             this._resetBall()
         }
@@ -505,9 +505,18 @@ class ThreeMainScene {
                 this._activeTarget = target;
             }
         })
+        
         if(this._ballBody.pos.y > this._activeTarget + 2 || this._ballBody.pos.y < this._activeTarget - 2 ){
             this._activeTarget = null;
         }
+
+        let color = this._activeTarget ?  0xD80F0F : 0xffffff
+        let targetColor = new THREE.Color(color);
+        TweenLite.to(this._ball.material.color, 0.5, {
+            r: targetColor.r,
+            g: targetColor.g,
+            b: targetColor.b
+        });
 
         this._blackObstacles.forEach(obstacle => {
             if(this._ballBody.pos.y > obstacle.position.y - SETTINGS.obstacles.blackBoxHeight / 2) {
@@ -564,6 +573,9 @@ class ThreeMainScene {
 
         if(this._isPanStart && this._startPanY > -30) {
             this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.13, 0.1)
+        }
+        if(this._ballLaunched) {
+            this._ball.rotation.z += this._ballBody.velocity.y * 0.003
         }
 
         // this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
@@ -631,9 +643,9 @@ class ThreeMainScene {
             this._startPanY += 0.5
         }
         if(this._startPanY > -20) {
-            this._launchingBallForce = this._startPanY * -14;
+            this._launchingBallForce = this._startPanY * -4;
         } else {
-            this._launchingBallForce = 130;
+            this._launchingBallForce = 90;
         }
     }
 
