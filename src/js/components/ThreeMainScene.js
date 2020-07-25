@@ -442,7 +442,8 @@ class ThreeMainScene {
 
     _stopBall() {
         this._obstaclesCollisions()
-    
+        if(this._noTarget) return;
+
         if(this._ballCantClick) {
             this._ballBody.velocity.y = 0; 
         } else if (this._ballResetOnClick) {
@@ -533,7 +534,9 @@ class ThreeMainScene {
         } 
 
          if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox.position.y + SETTINGS.obstacles.secondTargetBoxHeight / 2 && this._ballBody.pos.y < this._thirdTargetBox.position.y - SETTINGS.obstacles.thirdTargetBoxHeight / 2 || this._ballBody.pos.y > this._thirdTargetBox.position.y + SETTINGS.obstacles.thirdTargetBoxHeight / 2) {
-                this._ballCantClick = true;
+                this._noTarget = true;
+         } else {
+            this._noTarget = false;
          }
     }
 
