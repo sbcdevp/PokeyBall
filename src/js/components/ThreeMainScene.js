@@ -125,7 +125,7 @@ class ThreeMainScene {
             // alpha: true,
         });
 
-        this._renderer.setPixelRatio(3);
+        this._renderer.setPixelRatio(window.devicePixelRatio);
     }
     
     _setupScene() {
@@ -528,8 +528,6 @@ class ThreeMainScene {
 
         if (this._activeRedObstacle && this._ballBody.pos.y > this._activeRedObstacle.position.y - SETTINGS.obstacles.redBoxHeight / 2 && this._ballBody.pos.y < this._activeRedObstacle.position.y + SETTINGS.obstacles.redBoxHeight / 2) {
             this._ballResetOnClick = true;
-            this._score = 0
-
         } else {
             this._activeRedObstacle = null
             this._ballResetOnClick = false;
@@ -576,7 +574,7 @@ class ThreeMainScene {
         
 
         if(this._isPanStart && this._startPanY > -30) {
-            this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.05, 0.1)
+            this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.02, 0.7)
         }
         if(this._ballLaunched) {
             this._ball.rotation.z += 0.3
@@ -598,7 +596,7 @@ class ThreeMainScene {
             if(this._activeCoin.visible){
                 this._score += 20
                 this._ui.points.innerHTML = this._score;
-                
+
                 this._activeCoin.visible = false;
                 this._scene.remove(this._activeCoin);
                 this._activeCoin.geometry.dispose();
@@ -626,7 +624,7 @@ class ThreeMainScene {
     }
 
     _cameraFollowUpdate(){
-         let offset = new THREE.Vector3(this._ball.position.x - 20, this._ball.position.y, this._ball.position.z);
+         let offset = new THREE.Vector3(this._ball.position.x - 20 + (this._startPanY * 0.2), this._ball.position.y, this._ball.position.z);
          this._camera.position.lerp(offset, 0.1);
          this._camera.lookAt(this._ball.position.x, this._ball.position.y, this._ball.position.z); 
     }
@@ -652,8 +650,8 @@ class ThreeMainScene {
         }else if ( panEvent.direction === 8 && panEvent.deltaY > 0) {
             this._startPanY += 0.5
         }
-        if(this._startPanY > -20) {
-            this._launchingBallForce = this._startPanY * -4;
+        if(this._startPanY > -10) {
+            this._launchingBallForce = this._startPanY * -6;
         } else {
             this._launchingBallForce = 90;
         }
@@ -663,6 +661,7 @@ class ThreeMainScene {
         this._ballBody.pos.y = this._ball.position.y
         this._isPanStart = false;
         this._launchBall();
+        this._startPanY = 0;
     }
 
 }
