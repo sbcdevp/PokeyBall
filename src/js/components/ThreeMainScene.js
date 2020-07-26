@@ -509,14 +509,7 @@ class ThreeMainScene {
         if(this._ballBody.pos.y > this._activeTarget + 2 || this._ballBody.pos.y < this._activeTarget - 2 ){
             this._activeTarget = null;
         }
-
-        let color = this._activeTarget ?  0xD80F0F : 0xffffff
-        let targetColor = new THREE.Color(color);
-        TweenLite.to(this._ball.material.color, 0.5, {
-            r: targetColor.r,
-            g: targetColor.g,
-            b: targetColor.b
-        });
+        
 
         this._blackObstacles.forEach(obstacle => {
             if(this._ballBody.pos.y > obstacle.position.y - SETTINGS.obstacles.blackBoxHeight / 2) {
@@ -544,9 +537,19 @@ class ThreeMainScene {
 
          if(this._ballBody.pos.y > this._firstTargetBox.position.y + SETTINGS.obstacles.firstTargetBoxHeight / 2 && this._ballBody.pos.y < this._secondTargetBox.position.y - SETTINGS.obstacles.secondTargetBoxHeight / 2 || this._ballBody.pos.y > this._secondTargetBox.position.y + SETTINGS.obstacles.secondTargetBoxHeight / 2 && this._ballBody.pos.y < this._thirdTargetBox.position.y - SETTINGS.obstacles.thirdTargetBoxHeight / 2 || this._ballBody.pos.y > this._thirdTargetBox.position.y + SETTINGS.obstacles.thirdTargetBoxHeight / 2) {
                 this._noTarget = true;
-         } else {
+        } else {
             this._noTarget = false;
-         }
+        }
+
+         if(!this._noTarget) {
+            let color = this._activeTarget ?  0xD80F0F : 0xffffff
+            let targetColor = new THREE.Color(color);
+            TweenLite.to(this._ball.material.color, 0.5, {
+                r: targetColor.r,
+                g: targetColor.g,
+                b: targetColor.b
+            });
+        }
     }
 
     _calculatePhysics() {
@@ -572,10 +575,10 @@ class ThreeMainScene {
         this._stats.begin();
 
         if(this._isPanStart && this._startPanY > -30) {
-            this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.13, 0.1)
+            this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.05, 0.1)
         }
         if(this._ballLaunched) {
-            this._ball.rotation.z += this._ballBody.velocity.y * 0.003
+            this._ball.rotation.z += 0.3
         }
 
         // this._movingTargetBox.position.z = Math.sin(performance.now() * 0.002) * 5
