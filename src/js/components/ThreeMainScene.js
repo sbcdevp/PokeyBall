@@ -66,6 +66,7 @@ class ThreeMainScene {
         this._container = document.querySelector('.js-container');
 
         this._ui = {
+            points: this._container.querySelector(".js-score")
         }
         this._setup();
     }
@@ -79,7 +80,7 @@ class ThreeMainScene {
         this._setupRenderer();
 
         this._setupScene();
-        this._setupStats()
+
         this._animate();
         this._resize();
     }
@@ -92,6 +93,8 @@ class ThreeMainScene {
         this._blackObstacles = [];
         this._redObstacles = [];
         this._startPanY = 0;
+        this._score = 0
+        
 
         this._targetPositions = [55.5, 99.25, 135, 201.5, 260, 349];
 
@@ -139,12 +142,6 @@ class ThreeMainScene {
         // this._controls = new OrbitControls(this._camera, this._canvas);
 
         this._setupSceneObjects();
-    }
-
-    _setupStats() {
-        this._stats = new Stats();
-        this._stats.showPanel( 0 );
-        document.body.appendChild( this._stats.dom );
     }
 
     _setupSceneObjects() {
@@ -503,6 +500,7 @@ class ThreeMainScene {
         this._targetPositions.forEach(target => {
             if(this._ballBody.pos.y > target - 1 && this._ballBody.pos.y < target + 1) {
                 this._activeTarget = target;
+                this._score += 100
             }
         })
         
@@ -530,6 +528,8 @@ class ThreeMainScene {
 
         if (this._activeRedObstacle && this._ballBody.pos.y > this._activeRedObstacle.position.y - SETTINGS.obstacles.redBoxHeight / 2 && this._ballBody.pos.y < this._activeRedObstacle.position.y + SETTINGS.obstacles.redBoxHeight / 2) {
             this._ballResetOnClick = true;
+            this._score = 0
+
         } else {
             this._activeRedObstacle = null
             this._ballResetOnClick = false;
@@ -550,6 +550,7 @@ class ThreeMainScene {
                 b: targetColor.b
             });
         }
+        this._ui.points.innerHTML = this._score;
     }
 
     _calculatePhysics() {
@@ -572,7 +573,7 @@ class ThreeMainScene {
     }
 
     _render() {
-        this._stats.begin();
+        
 
         if(this._isPanStart && this._startPanY > -30) {
             this._ballBody.pos.y = lerp(this._ballBody.pos.y, this._ballBody.pos.y + this._startPanY * 0.05, 0.1)
@@ -589,20 +590,26 @@ class ThreeMainScene {
         
         this._coins.forEach(coin => {
             coin.rotation.y += 0.01
-
-            if(coin.position.y < this._ballBody.pos.y && coin.position.z > this._ballBody.pos.z - 1 && coin.position.z < this._ballBody.pos.z + 1) {
-                this._scene.remove(coin);
-                setTimeout(() => {
-                    coin.geometry.dispose();
-                    coin.material.dispose();
-                }, 1000);
+            if(this._ballBody.pos.y > coin.position.y && this._ballBody.pos.y < coin.position.y + 1 && coin.position.z > this._ballBody.pos.z - 1 && coin.position.z < this._ballBody.pos.z + 1) {
+               this._activeCoin = coin
             }
         });
+        if(this._activeCoin && this._activeCoin.position.y < this._ballBody.pos.y){
+            if(this._activeCoin.visible){
+                this._score += 20
+                this._ui.points.innerHTML = this._score;
+                
+                this._activeCoin.visible = false;
+                this._scene.remove(this._activeCoin);
+                this._activeCoin.geometry.dispose();
+                this._activeCoin.material.dispose();
+            }
+        }
 
         this._ball.position.copy( new THREE.Vector3(this._ballBody.pos.x, this._ballBody.pos.y, this._ballBody.pos.z ));
     
         this._renderer.render(this._scene, this._camera)
-        this._stats.end();
+        
 
     }
 
